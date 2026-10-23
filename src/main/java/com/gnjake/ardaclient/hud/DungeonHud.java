@@ -92,9 +92,9 @@ public final class DungeonHud extends HudPanel {
 
     @Override
     protected void draw(GuiGraphicsExtractor graphics, Font font, int width, int height, long now) {
-        ArdaTheme.frame(graphics, 0, 0, width, height);
-        ArdaTheme.header(graphics, 0, 0, width, HEADER);
-        ArdaTheme.mark(graphics, PAD + 2, 4, ArdaTheme.ACCENT);
+        ArdaTheme.frame(graphics, 0, 0, width, height, opacity());
+        ArdaTheme.header(graphics, 0, 0, width, HEADER, opacity());
+        ArdaTheme.mark(graphics, PAD + 2, 4, ArdaTheme.accent());
         graphics.text(font, "Dungeons", PAD + 7, 2, ArdaTheme.TEXT);
         int rowY = HEADER + 3;
         if (shownCount() == 0) {
@@ -110,12 +110,12 @@ public final class DungeonHud extends HudPanel {
                 String status = DungeonTracker.status(entry, now);
                 int color = switch (entry.state) {
                     case "OPEN" -> ArdaTheme.GREEN;
-                    case "ACTIVE" -> ArdaTheme.ACCENT_BRIGHT;
+                    case "ACTIVE" -> ArdaTheme.accentBright();
                     case "COOLDOWN" -> ArdaTheme.AMBER;
                     default -> ArdaTheme.DIM;
                 };
                 if ((stripe++ & 1) == 1) {
-                    graphics.fill(1, rowY - 1, width - 1, rowY + ROW - 1, ArdaTheme.ROW_ALT);
+                    graphics.fill(1, rowY - 1, width - 1, rowY + ROW - 1, ArdaTheme.fade(ArdaTheme.ROW_ALT, opacity()));
                 }
 
                 String number = String.valueOf(tier);
@@ -128,7 +128,7 @@ public final class DungeonHud extends HudPanel {
 
         String prompt = DungeonTracker.prompt(now);
         if (!prompt.isEmpty()) {
-            graphics.fill(1, rowY + 1, width - 1, rowY + 2, ArdaTheme.DIVIDER);
+            graphics.fill(1, rowY + 1, width - 1, rowY + 2, ArdaTheme.fade(ArdaTheme.DIVIDER, opacity()));
             graphics.text(font, prompt, PAD, rowY + 4, ArdaTheme.MUTED);
         }
     }

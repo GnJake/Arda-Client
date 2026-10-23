@@ -4,7 +4,7 @@ import com.gnjake.ardaclient.ArdaClient;
 import com.gnjake.ardaclient.ServerCommands;
 import com.gnjake.ardaclient.config.ArdaStore;
 import com.gnjake.ardaclient.dungeon.DungeonTracker;
-import com.gnjake.ardaclient.encyclopedia.EncyclopediaScreen;
+import com.gnjake.ardaclient.hud.HudSettingsScreen;
 import com.gnjake.ardaclient.gui.ArdaTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -37,7 +37,7 @@ public final class WheelScreen extends Screen {
     private List<Section> sections() {
         return List.of(
             new Section("CHRONICLES", "Open Arda Chronicles", Items.WRITABLE_BOOK, () -> this.send(ArdaStore.data.settings.chroniclesCommand)),
-            new Section("ENCYCLOPEDIA", "Item prices and upgrades", Items.KNOWLEDGE_BOOK, () -> this.minecraft.gui.setScreen(new EncyclopediaScreen(null))),
+            new Section("HUD", "Panels, color and transparency", Items.SPYGLASS, () -> this.minecraft.gui.setScreen(new HudSettingsScreen(null))),
             new Section("SKIRMISH", "Run /skirmish info", Items.CLOCK, () -> this.send(ArdaStore.data.settings.skirmishCommand)),
             new Section("DUNGEON", "Run /dungeon_info", Items.IRON_SWORD, () -> {
                 this.minecraft.gui.setScreen(null);
@@ -99,17 +99,17 @@ public final class WheelScreen extends Screen {
             }
 
             if (settings.labels) {
-                this.small(graphics, section.name, x, y + (settings.icons ? 12 : 0), index == this.selected ? ArdaTheme.ACCENT_BRIGHT : ArdaTheme.TEXT);
+                this.small(graphics, section.name, x, y + (settings.icons ? 12 : 0), index == this.selected ? ArdaTheme.accentBright() : ArdaTheme.TEXT);
             }
         }
 
         Section hover = this.selected < 0 ? null : sections.get(this.selected);
         String center = hover == null ? "ARDA" : hover.name;
         if (hover == null) {
-            ArdaTheme.mark(graphics, centerX, centerY - 18, ArdaTheme.ACCENT);
+            ArdaTheme.mark(graphics, centerX, centerY - 18, ArdaTheme.accent());
         }
 
-        graphics.centeredText(this.font, center, centerX, centerY - 5, hover == null ? ArdaTheme.ACCENT_BRIGHT : ArdaTheme.TEXT);
+        graphics.centeredText(this.font, center, centerX, centerY - 5, hover == null ? ArdaTheme.accentBright() : ArdaTheme.TEXT);
         if (hover != null) {
             graphics.pose().pushMatrix();
             graphics.pose().translate(centerX, centerY + 8);
@@ -164,7 +164,7 @@ public final class WheelScreen extends Screen {
     }
 
     private int wedgeColor(boolean active, double opacity) {
-        int rgb = active ? 0x3A1C1E : 0x15171B;
+        int rgb = active ? ArdaTheme.mix(0x15171B, ArdaStore.data.accentColor, 0.2) : 0x15171B;
         int alpha = (int)(255.0 * Math.max(0.0, Math.min(1.0, opacity)) * (active ? 0.92 : 0.86));
         return alpha << 24 | rgb;
     }

@@ -89,7 +89,7 @@ public final class ItemDraftScreen extends ArdaPanelScreen {
         g.pose().pushMatrix();
         g.pose().translate(this.px + 13, y);
         g.pose().scale(0.65F);
-        g.text(this.font, text, 0, 0, ArdaTheme.ACCENT);
+        g.text(this.font, text, 0, 0, ArdaTheme.accent());
         g.pose().popMatrix();
     }
 }

@@ -5,7 +5,6 @@ import com.gnjake.ardaclient.config.ArdaStore;
 import com.gnjake.ardaclient.encyclopedia.EncyclopediaScreen;
 import com.gnjake.ardaclient.gui.ArdaPanelScreen;
 import com.gnjake.ardaclient.gui.ArdaTheme;
-import com.gnjake.ardaclient.hud.HudSettingsScreen;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -17,6 +16,8 @@ import net.minecraft.world.item.ItemStack;
 
 public final class QuickCommandsScreen extends ArdaPanelScreen {
     private static final int TILE_HEIGHT = 42;
+    private static final int DELETE_WIDTH = 18;
+    private static final int EDIT_WIDTH = 28;
     private int page;
     private int columns;
     private int rows;
@@ -33,10 +34,9 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
         this.tileWidth = (this.pw - 32 - (this.columns - 1) * 8) / this.columns;
         this.rows = Math.max(1, (this.ph - 102) / 49);
         this.page = Math.min(this.page, this.maxPage());
-        int actionWidth = (this.pw - 34) / 3;
+        int actionWidth = (this.pw - 27) / 2;
         this.button("New Command", this.px + 10, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new QuickCommandEditScreen(this, null)));
         this.button("Encyclopedia", this.px + 17 + actionWidth, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new EncyclopediaScreen(this)));
-        this.button("HUD Settings", this.px + 24 + actionWidth * 2, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new HudSettingsScreen(this)));
         this.button("<", this.px + this.pw - 67, this.py + this.ph - 27, 26, () -> this.page = Math.max(0, this.page - 1));
         this.button(">", this.px + this.pw - 37, this.py + this.ph - 27, 26, () -> this.page = Math.min(this.maxPage(), this.page + 1));
     }
@@ -74,7 +74,7 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
             ArdaStore.QuickCommand command = commands.get(index);
             boolean hover = mouseX >= x && mouseX < x + this.tileWidth && mouseY >= y && mouseY < y + TILE_HEIGHT;
             ArdaTheme.row(graphics, x, y, this.tileWidth, TILE_HEIGHT, hover, false);
-            graphics.outline(x, y, this.tileWidth, TILE_HEIGHT, hover ? ArdaTheme.ACCENT : ArdaTheme.BORDER);
+            graphics.outline(x, y, this.tileWidth, TILE_HEIGHT, hover ? ArdaTheme.accent() : ArdaTheme.BORDER);
             int textX = x + 7;
             Item icon = this.icon(command.icon);
             if (icon != null) {
@@ -85,26 +85,30 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
             int textWidth = Math.max(25, x + this.tileWidth - 46 - textX);
             graphics.text(this.font, this.font.plainSubstrByWidth(command.name, textWidth), textX, y + 8, ArdaTheme.TEXT);
             graphics.text(this.font, this.font.plainSubstrByWidth(command.command, textWidth), textX, y + 23, ArdaTheme.MUTED);
-            int editX = x + this.tileWidth - 38;
-            this.pencil(graphics, editX + 4, y + 14);
-            graphics.text(this.font, "X", x + this.tileWidth - 15, y + 17, ArdaTheme.ACCENT_BRIGHT);
+            TileAction hovered = hover ? this.actionAt(index, mouseX) : TileAction.RUN;
+            int deleteX = x + this.tileWidth - DELETE_WIDTH;
+            int editX = deleteX - EDIT_WIDTH;
+            this.zone(graphics, editX, y, EDIT_WIDTH, "Edit", hovered == TileAction.EDIT);
+            this.zone(graphics, deleteX, y, DELETE_WIDTH, "X", hovered == TileAction.DELETE);
         }
 
         if (commands.isEmpty()) {
             graphics.centeredText(this.font, "No commands yet. Add a shortcut above.", this.px + this.pw / 2, this.py + 94, ArdaTheme.MUTED);
         }
 
-        graphics.text(this.font, "Click a box to run  •  pencil to edit  •  X to delete", this.px + 13, this.py + this.ph - 23, ArdaTheme.MUTED);
+        graphics.text(this.font, "Click a box to run  •  Edit to change  •  X to delete", this.px + 13, this.py + this.ph - 23, ArdaTheme.MUTED);
         String pages = this.page + 1 + "/" + (this.maxPage() + 1);
         graphics.text(this.font, pages, this.px + this.pw - 96, this.py + this.ph - 22, ArdaTheme.MUTED);
     }
 
-    private void pencil(GuiGraphicsExtractor graphics, int x, int y) {
-        for (int step = 0; step < 7; step++) {
-            graphics.fill(x + step, y + 6 - step, x + step + 2, y + 8 - step, ArdaTheme.ACCENT_BRIGHT);
+    /** One of the Edit and X areas at the right end of a tile. */
+    private void zone(GuiGraphicsExtractor graphics, int x, int y, int width, String label, boolean hover) {
+        if (hover) {
+            graphics.fill(x, y + 1, x + width - 1, y + TILE_HEIGHT - 1, ArdaTheme.active());
         }
 
-        graphics.fill(x - 2, y + 7, x + 1, y + 10, ArdaTheme.MUTED);
+        graphics.fill(x, y + 8, x + 1, y + TILE_HEIGHT - 8, ArdaTheme.DIVIDER);
+        graphics.centeredText(this.font, label, x + width / 2, y + (TILE_HEIGHT - 8) / 2, hover ? ArdaTheme.accentBright() : ArdaTheme.MUTED);
     }
 
     private Item icon(String id) {
@@ -140,11 +144,11 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
     private TileAction actionAt(int index, double mouseX) {
         int slot = index - this.page * this.perPage();
         int right = this.tileX(slot % this.columns) + this.tileWidth;
-        if (mouseX >= right - 21) {
+        if (mouseX >= right - DELETE_WIDTH) {
             return TileAction.DELETE;
         }
 
-        return mouseX >= right - 42 ? TileAction.EDIT : TileAction.RUN;
+        return mouseX >= right - DELETE_WIDTH - EDIT_WIDTH ? TileAction.EDIT : TileAction.RUN;
     }
 
     @Override

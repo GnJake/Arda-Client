@@ -81,7 +81,7 @@ public final class DraftEntryScreen extends ArdaPanelScreen {
             base + "  •  " + (this.entry.upgrades.size() + this.entry.levelUpgrades.size()) + " upgrade rules",
             this.px + 12,
             this.py + 51,
-            this.entry.unique ? ArdaTheme.UNIQUE : (this.entry.unitPrice == null ? ArdaTheme.MUTED : ArdaTheme.ACCENT_BRIGHT)
+            this.entry.unique ? ArdaTheme.UNIQUE : (this.entry.unitPrice == null ? ArdaTheme.MUTED : ArdaTheme.accentBright())
         );
         this.label(
             g,
@@ -91,7 +91,7 @@ public final class DraftEntryScreen extends ArdaPanelScreen {
             this.py + 69,
             ArdaTheme.MUTED
         );
-        this.label(g, "Upgrade cost — enter any combination", this.py + 113, ArdaTheme.ACCENT);
+        this.label(g, "Upgrade cost — enter any combination", this.py + 113, ArdaTheme.accent());
     }
 
     private void label(GuiGraphicsExtractor g, String text, int y, int color) {

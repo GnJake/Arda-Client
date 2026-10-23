@@ -22,11 +22,12 @@ import net.fabricmc.loader.api.FabricLoader;
 
 /** Arda Client's settings, saved to {@code config/arda-client.json}. */
 public final class ArdaStore {
-    public static final double MIN_SCALE = 0.5;
+    public static final double MIN_SCALE = 0.25;
     public static final double MAX_SCALE = 2.0;
     public static final double DEFAULT_SCALE = 0.75;
     public static final int DEFAULT_LEFT = 2;
     public static final int DEFAULT_TOP = 12;
+    public static final int DEFAULT_ACCENT = 0xC62828;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir();
@@ -225,6 +226,10 @@ public final class ArdaStore {
         data.dungeonTop = Math.max(0, data.dungeonTop);
         data.currencyLeft = Math.max(0, data.currencyLeft);
         data.currencyTop = Math.max(0, data.currencyTop);
+        data.tallyLeft = Math.max(0, data.tallyLeft);
+        data.tallyTop = Math.max(0, data.tallyTop);
+        data.accentColor &= 0xFFFFFF;
+        data.hudOpacity = Double.isFinite(data.hudOpacity) ? Math.max(0.0, Math.min(1.0, data.hudOpacity)) : 1.0;
     }
 
     /** Clamps a HUD scale to the allowed range in 5% steps. */
@@ -252,6 +257,15 @@ public final class ArdaStore {
         public boolean currencyDocked = true;
         public int currencyLeft = DEFAULT_LEFT;
         public int currencyTop = DEFAULT_TOP;
+        /** Adds the last-seen ender chest contents to the currency counter. */
+        public boolean currencyEnderChest = false;
+        public boolean tallyHud = true;
+        public boolean tallyDocked = true;
+        public int tallyLeft = DEFAULT_LEFT;
+        public int tallyTop = DEFAULT_TOP;
+        public int accentColor = DEFAULT_ACCENT;
+        /** Background opacity of the HUD panels, from 0 (text only) to 1. */
+        public double hudOpacity = 1.0;
         public long dungeonInfoAt;
         public List<DungeonTier> dungeons = new ArrayList<>();
         public boolean[] shownDungeons = allShown();

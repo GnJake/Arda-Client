@@ -42,7 +42,7 @@ public abstract class ArdaPanelScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float dt) {
         ArdaTheme.frame(g, this.px, this.py, this.pw, this.ph);
         ArdaTheme.header(g, this.px, this.py, this.pw, 25);
-        ArdaTheme.mark(g, this.px + 12, this.py + 10, ArdaTheme.ACCENT);
+        ArdaTheme.mark(g, this.px + 12, this.py + 10, ArdaTheme.accent());
         g.text(this.font, this.title, this.px + 22, this.py + 9, ArdaTheme.TEXT);
         g.text(this.font, "<", this.px + this.pw - 15, this.py + 9, ArdaTheme.MUTED);
         super.extractRenderState(g, mx, my, dt);

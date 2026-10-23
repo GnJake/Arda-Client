@@ -39,37 +39,50 @@ public enum ArdaCurrency {
         return count + " " + (count == 1L ? this.singular : this.plural);
     }
 
+    /** Formats a Bloodstone total as whole Black Gems plus change, e.g. "3 Black Gems 12 Bloodstones". */
+    public static String describe(long bloodstones) {
+        long gems = bloodstones / BLOODSTONES_PER_GEM;
+        long change = bloodstones % BLOODSTONES_PER_GEM;
+        if (change == 0L) {
+            return BLACK_GEM.amount(gems);
+        }
+
+        return gems == 0L ? BLOODSTONE.amount(change) : BLACK_GEM.amount(gems) + " " + BLOODSTONE.amount(change);
+    }
+
     public BigDecimal inBlackGems() {
         return BigDecimal.valueOf(this.bloodstones).divide(BigDecimal.valueOf(BLOODSTONES_PER_GEM));
     }
 
+    /** The currency an item is, or null. Every Arda currency is a clock, so other items are skipped cheaply. */
     public static ArdaCurrency of(ItemStack stack) {
-        if (stack.isEmpty()) {
+        if (stack.isEmpty() || !stack.is(Items.CLOCK)) {
             return null;
-        } else {
-            String type = ArdaItems.serverItemType(stack);
-            if (!type.isBlank()) {
-                for (ArdaCurrency currency : values()) {
-                    if (currency.serverType.equals(type)) {
-                        return currency;
-                    }
+        }
+
+        String type = ArdaItems.serverItemType(stack);
+        if (!type.isBlank()) {
+            for (ArdaCurrency currency : values()) {
+                if (currency.serverType.equals(type)) {
+                    return currency;
                 }
+            }
 
-                return null;
-            } else if (stack.is(Items.CLOCK) && hasKnockbackThree(stack)) {
-                String name = stack.getHoverName().getString().strip().toLowerCase(Locale.ROOT);
+            return null;
+        }
 
-                for (ArdaCurrency currency : values()) {
-                    if (currency.singular.toLowerCase(Locale.ROOT).equals(name)) {
-                        return currency;
-                    }
-                }
+        if (!hasKnockbackThree(stack)) {
+            return null;
+        }
 
-                return null;
-            } else {
-                return null;
+        String name = stack.getHoverName().getString().strip().toLowerCase(Locale.ROOT);
+        for (ArdaCurrency currency : values()) {
+            if (currency.singular.toLowerCase(Locale.ROOT).equals(name)) {
+                return currency;
             }
         }
+
+        return null;
     }
 
     private static boolean hasKnockbackThree(ItemStack stack) {

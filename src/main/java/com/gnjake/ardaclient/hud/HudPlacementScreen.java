@@ -10,7 +10,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 public final class HudPlacementScreen extends Screen {
-    private static final List<HudPanel> PANELS = List.of(CurrencyHud.INSTANCE, DungeonHud.INSTANCE);
+    private static final List<HudPanel> PANELS = List.of(TallyHud.INSTANCE, CurrencyHud.INSTANCE, DungeonHud.INSTANCE);
     private final Screen parent;
     private HudPanel dragging;
     private double grabX;
@@ -35,11 +35,11 @@ public final class HudPlacementScreen extends Screen {
         long now = System.currentTimeMillis();
 
         for (HudPanel panel : PANELS) {
-            if (panel.enabled()) {
+            if (panel.shown(now)) {
                 panel.render(graphics);
                 HudPanel.Bounds bounds = panel.bounds(this.width, this.height, now);
                 if (panel == this.dragging || bounds.contains(mouseX, mouseY)) {
-                    graphics.outline((int)bounds.x() - 1, (int)bounds.y() - 1, (int)Math.ceil(bounds.width()) + 2, (int)Math.ceil(bounds.height()) + 2, ArdaTheme.ACCENT_BRIGHT);
+                    graphics.outline((int)bounds.x() - 1, (int)bounds.y() - 1, (int)Math.ceil(bounds.width()) + 2, (int)Math.ceil(bounds.height()) + 2, ArdaTheme.accentBright());
                 }
             }
         }
@@ -62,7 +62,7 @@ public final class HudPlacementScreen extends Screen {
 
             for (HudPanel panel : PANELS.reversed()) {
                 HudPanel.Bounds bounds = panel.bounds(this.width, this.height, now);
-                if (panel.enabled() && bounds.contains(event.x(), event.y())) {
+                if (panel.shown(now) && bounds.contains(event.x(), event.y())) {
                     this.dragging = panel;
                     this.grabX = event.x() - bounds.x();
                     this.grabY = event.y() - bounds.y();

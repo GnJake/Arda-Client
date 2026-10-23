@@ -105,7 +105,7 @@ public final class EncyclopediaScreen extends ArdaPanelScreen {
         String count = this.shown.size() == PriceCatalog.book.entries.size()
             ? this.shown.size() + (this.shown.size() == 1 ? " entry" : " entries")
             : this.shown.size() + " of " + PriceCatalog.book.entries.size();
-        g.text(this.font, this.font.plainSubstrByWidth(InventoryWorth.text(), Math.max(60, this.pw - 110)), this.px + 10, this.py + 57, ArdaTheme.ACCENT_BRIGHT);
+        g.text(this.font, this.font.plainSubstrByWidth(InventoryWorth.text(), Math.max(60, this.pw - 110)), this.px + 10, this.py + 57, ArdaTheme.accentBright());
         g.text(this.font, count, this.px + this.pw - 10 - this.font.width(count), this.py + 57, ArdaTheme.MUTED);
         int top = this.py + LIST_TOP;
         int bottom = this.py + this.ph - LIST_BOTTOM_MARGIN;
@@ -127,7 +127,7 @@ public final class EncyclopediaScreen extends ArdaPanelScreen {
             }
 
             g.text(this.font, this.font.plainSubstrByWidth(name, this.pw - 50), this.px + 34, ry + 5, entry.unique ? ArdaTheme.UNIQUE : ArdaTheme.TEXT);
-            int valueColor = entry.unique ? ArdaTheme.UNIQUE : (entry.unitPrice == null ? ArdaTheme.MUTED : ArdaTheme.ACCENT_BRIGHT);
+            int valueColor = entry.unique ? ArdaTheme.UNIQUE : (entry.unitPrice == null ? ArdaTheme.MUTED : ArdaTheme.accentBright());
             g.pose().pushMatrix();
             g.pose().translate(this.px + 34, ry + 18);
             g.pose().scale(0.68F);
