@@ -2,6 +2,8 @@ package com.gnjake.ardaclient.config;
 
 import com.gnjake.ardaclient.ArdaClient;
 import com.gnjake.ardaclient.dungeon.DungeonTracker;
+import com.gnjake.ardaclient.waypoint.SkirmishWaypoints;
+import com.gnjake.ardaclient.wheel.WheelSlots;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -28,6 +30,9 @@ public final class ArdaStore {
     public static final int DEFAULT_LEFT = 2;
     public static final int DEFAULT_TOP = 12;
     public static final int DEFAULT_ACCENT = 0xC62828;
+    public static final int DEFAULT_GRADIENT = 0xE65100;
+    /** The most colors a gradient can have, counting the accent. */
+    public static final int MAX_GRADIENT_COLORS = 5;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir();
@@ -200,6 +205,19 @@ public final class ArdaStore {
             data.settings.skirmishCommand = "/skirmish info";
         }
 
+        if (data.wheel == null) {
+            data.wheel = new ArrayList<>(WheelSlots.DEFAULTS);
+        }
+
+        while (data.wheel.size() < WheelSlots.MIN_SLOTS) {
+            data.wheel.add(WheelSlots.NONE);
+        }
+
+        while (data.wheel.size() > WheelSlots.MAX_SLOTS) {
+            data.wheel.removeLast();
+        }
+
+        data.wheel.replaceAll(slot -> slot == null ? WheelSlots.NONE : slot);
         data.commands.removeIf(command -> command == null || command.command == null || command.command.isBlank());
         data.commands.sort(Comparator.comparingInt(command -> command.order));
 
@@ -228,7 +246,34 @@ public final class ArdaStore {
         data.currencyTop = Math.max(0, data.currencyTop);
         data.tallyLeft = Math.max(0, data.tallyLeft);
         data.tallyTop = Math.max(0, data.tallyTop);
+        data.mithrilScale = scale(data.mithrilScale);
+        data.mithrilLeft = Math.max(0, data.mithrilLeft);
+        data.mithrilTop = Math.max(0, data.mithrilTop);
+        data.mithrilTallyLeft = Math.max(0, data.mithrilTallyLeft);
+        data.mithrilTallyTop = Math.max(0, data.mithrilTallyTop);
+        data.towersScale = scale(data.towersScale);
+        data.towersLeft = Math.max(0, data.towersLeft);
+        data.towersTop = Math.max(0, data.towersTop);
         data.accentColor &= 0xFFFFFF;
+        if (data.waypointType == null) {
+            data.waypointType = "xaero";
+        }
+
+        data.waypointY = Math.max(SkirmishWaypoints.MIN_Y, Math.min(SkirmishWaypoints.MAX_Y, data.waypointY));
+        if (data.gradientColors == null || data.gradientColors.isEmpty()) {
+            data.gradientColors = new ArrayList<>(List.of(data.gradientColor & 0xFFFFFF));
+        }
+
+        data.gradientColors.removeIf(Objects::isNull);
+        while (data.gradientColors.size() > MAX_GRADIENT_COLORS - 1) {
+            data.gradientColors.removeLast();
+        }
+
+        if (data.gradientColors.isEmpty()) {
+            data.gradientColors.add(DEFAULT_GRADIENT);
+        }
+
+        data.gradientColors.replaceAll(color -> color & 0xFFFFFF);
         data.hudOpacity = Double.isFinite(data.hudOpacity) ? Math.max(0.0, Math.min(1.0, data.hudOpacity)) : 1.0;
     }
 
@@ -247,6 +292,26 @@ public final class ArdaStore {
         public int schema = 1;
         public Settings settings = new Settings();
         public List<QuickCommand> commands = new ArrayList<>();
+        /** What each quick wheel slot opens, clockwise from the top. See {@link WheelSlots}. */
+        public List<String> wheel = new ArrayList<>(WheelSlots.DEFAULTS);
+        /** Which mod skirmish waypoint links add to: {@code xaero}, {@code meteor} or {@code off}. */
+        public String waypointType = "xaero";
+        /** Arda doesn't say how high a skirmish is, so waypoints go at this height. */
+        public int waypointY = 80;
+        /** Logs a camp or outpost when its loot chest is opened with its boss bar showing. */
+        public boolean campLogger = false;
+        /** Asks for a tower's number when a lodestone in Harad is right-clicked. */
+        public boolean towerLogger = true;
+        /** Logs tunnel spawners found underground with a boss bar showing. */
+        public boolean tunnelLogger = false;
+        /** Marks the nearest logged tunnel spawner complete on a tunnel Chronicle message. */
+        public boolean tunnelCompletion = true;
+        /** With Meteor, outlines logged tunnel spawners through walls and draws the tunnel path as blocks. */
+        public boolean tunnelXray = true;
+        /** Marks a path to the nearest tunnel spawner not yet completed. */
+        public boolean tunnelPath = false;
+        /** Posts estimated dungeon and skirmish profits in chat. */
+        public boolean profitChat = true;
         public boolean pricingTooltips = true;
         public boolean dungeonHud = true;
         public double dungeonScale = DEFAULT_SCALE;
@@ -263,7 +328,31 @@ public final class ArdaStore {
         public boolean tallyDocked = true;
         public int tallyLeft = DEFAULT_LEFT;
         public int tallyTop = DEFAULT_TOP;
+        /** The Mithril (Crude Mithril Ore) counter and tally, which share one scale. */
+        public boolean mithrilHud = true;
+        public double mithrilScale = DEFAULT_SCALE;
+        public boolean mithrilDocked = true;
+        public int mithrilLeft = DEFAULT_LEFT;
+        public int mithrilTop = DEFAULT_TOP;
+        public boolean mithrilTallyHud = true;
+        public boolean mithrilTallyDocked = true;
+        public int mithrilTallyLeft = DEFAULT_LEFT;
+        public int mithrilTallyTop = DEFAULT_TOP;
+        /** Tower holders and clan points, shown only during the Towers Event. */
+        public boolean towersHud = true;
+        /** Shows the towers panel only while the event runs (and its results after); otherwise always. */
+        public boolean towersOnlyDuringEvent = true;
+        public double towersScale = DEFAULT_SCALE;
+        public boolean towersDocked = true;
+        public int towersLeft = DEFAULT_LEFT;
+        public int towersTop = DEFAULT_TOP;
         public int accentColor = DEFAULT_ACCENT;
+        /** Blends accents from {@link #accentColor} through each of {@link #gradientColors} in turn. */
+        public boolean accentGradient = false;
+        /** The gradient's colors after the accent: 1 to {@link #MAX_GRADIENT_COLORS} - 1 of them. */
+        public List<Integer> gradientColors;
+        /** The single second color from before gradients could have more; read once to fill {@link #gradientColors}. */
+        public int gradientColor = DEFAULT_GRADIENT;
         /** Background opacity of the HUD panels, from 0 (text only) to 1. */
         public double hudOpacity = 1.0;
         public long dungeonInfoAt;

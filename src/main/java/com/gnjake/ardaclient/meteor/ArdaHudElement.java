@@ -3,6 +3,8 @@ package com.gnjake.ardaclient.meteor;
 import com.gnjake.ardaclient.hud.CurrencyHud;
 import com.gnjake.ardaclient.hud.DungeonHud;
 import com.gnjake.ardaclient.hud.HudPanel;
+import com.gnjake.ardaclient.hud.MithrilHud;
+import com.gnjake.ardaclient.hud.MithrilTallyHud;
 import com.gnjake.ardaclient.hud.TallyHud;
 import meteordevelopment.meteorclient.settings.DoubleSetting;
 import meteordevelopment.meteorclient.settings.Setting;
@@ -26,6 +28,10 @@ public final class ArdaHudElement extends HudElement {
         "Your currency in Black Gems and Bloodstones.", () -> new ArdaHudElement(ArdaHudElement.CURRENCY, CurrencyHud.INSTANCE));
     public static final HudElementInfo<ArdaHudElement> TALLY = new HudElementInfo<>(GROUP, "arda-tally", "Currency Tally",
         "Currency earned over the last hour, day and week.", () -> new ArdaHudElement(ArdaHudElement.TALLY, TallyHud.INSTANCE));
+    public static final HudElementInfo<ArdaHudElement> MITHRIL = new HudElementInfo<>(GROUP, "arda-mithril", "Mithril Counter",
+        "Your Mithril (Crude Mithril Ore).", () -> new ArdaHudElement(ArdaHudElement.MITHRIL, MithrilHud.INSTANCE));
+    public static final HudElementInfo<ArdaHudElement> MITHRIL_TALLY = new HudElementInfo<>(GROUP, "arda-mithril-tally", "Mithril Tally",
+        "Mithril earned over the last hour, day and week.", () -> new ArdaHudElement(ArdaHudElement.MITHRIL_TALLY, MithrilTallyHud.INSTANCE));
 
     private final HudPanel panel;
     private final SettingGroup sgGeneral = this.settings.getDefaultGroup();

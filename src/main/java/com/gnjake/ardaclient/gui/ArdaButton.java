@@ -40,7 +40,7 @@ public final class ArdaButton extends AbstractButton {
         g.fill(this.getX() + 1, this.getY() + 1, this.getRight() - 1, this.getBottom() - 1, bg);
         g.outline(this.getX(), this.getY(), this.getWidth(), this.getHeight(), border);
         if (hot && this.active) {
-            g.fill(this.getX() + 1, this.getBottom() - 2, this.getRight() - 1, this.getBottom() - 1, ArdaTheme.accent());
+            ArdaTheme.accentLine(g, this.getX() + 1, this.getBottom() - 2, this.getRight() - 1, this.getBottom() - 1);
         }
 
         g.centeredText(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, text);

@@ -103,7 +103,7 @@ public final class DungeonTracker {
         }
     }
 
-    private static int tierForName(String name) {
+    public static int tierForName(String name) {
         String sought = name.trim().replaceAll("\\s+", " ");
 
         for (int index = 0; index < NAMES.length; index++) {

@@ -21,7 +21,7 @@ public final class CurrencyHud extends HudPanel {
     }
 
     private static long bloodstones() {
-        return CurrencyTracker.total(ArdaStore.data.currencyEnderChest);
+        return CurrencyTracker.CURRENCY.total(ArdaStore.data.currencyEnderChest);
     }
 
     private static String gems() {
@@ -34,7 +34,7 @@ public final class CurrencyHud extends HudPanel {
 
     /** Shown in place of the change until the ender chest has been opened once. */
     private static boolean waitingForEnderChest() {
-        return ArdaStore.data.currencyEnderChest && !CurrencyTracker.enderChestSeen();
+        return ArdaStore.data.currencyEnderChest && !CurrencyTracker.CURRENCY.enderChestSeen();
     }
 
     private static String secondary() {
@@ -74,7 +74,7 @@ public final class CurrencyHud extends HudPanel {
     @Override
     protected void draw(GuiGraphicsExtractor graphics, Font font, int width, int height, long now) {
         ArdaTheme.frame(graphics, 0, 0, width, height, opacity());
-        ArdaTheme.mark(graphics, PAD + 2, 6, ArdaTheme.accent());
+        ArdaTheme.mark(graphics, PAD + 2, 6);
         int x = PAD + 7;
         graphics.text(font, gems(), x, 4, ArdaTheme.TEXT);
         graphics.text(font, secondary(), x + font.width(gems()) + GAP, 4, waitingForEnderChest() ? ArdaTheme.DIM : ArdaTheme.MUTED);

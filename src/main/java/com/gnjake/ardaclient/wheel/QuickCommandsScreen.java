@@ -34,9 +34,10 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
         this.tileWidth = (this.pw - 32 - (this.columns - 1) * 8) / this.columns;
         this.rows = Math.max(1, (this.ph - 102) / 49);
         this.page = Math.min(this.page, this.maxPage());
-        int actionWidth = (this.pw - 27) / 2;
+        int actionWidth = (this.pw - 34) / 3;
         this.button("New Command", this.px + 10, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new QuickCommandEditScreen(this, null)));
-        this.button("Encyclopedia", this.px + 17 + actionWidth, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new EncyclopediaScreen(this)));
+        this.button("Edit Wheel", this.px + 17 + actionWidth, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new WheelEditScreen(this)));
+        this.button("Encyclopedia", this.px + 24 + actionWidth * 2, this.py + 31, actionWidth, () -> this.minecraft.gui.setScreen(new EncyclopediaScreen(this)));
         this.button("<", this.px + this.pw - 67, this.py + this.ph - 27, 26, () -> this.page = Math.max(0, this.page - 1));
         this.button(">", this.px + this.pw - 37, this.py + this.ph - 27, 26, () -> this.page = Math.min(this.maxPage(), this.page + 1));
     }
@@ -108,7 +109,11 @@ public final class QuickCommandsScreen extends ArdaPanelScreen {
         }
 
         graphics.fill(x, y + 8, x + 1, y + TILE_HEIGHT - 8, ArdaTheme.DIVIDER);
-        graphics.centeredText(this.font, label, x + width / 2, y + (TILE_HEIGHT - 8) / 2, hover ? ArdaTheme.accentBright() : ArdaTheme.MUTED);
+        if (hover) {
+            ArdaTheme.accentTextCentered(graphics, this.font, label, x + width / 2, y + (TILE_HEIGHT - 8) / 2);
+        } else {
+            graphics.centeredText(this.font, label, x + width / 2, y + (TILE_HEIGHT - 8) / 2, ArdaTheme.MUTED);
+        }
     }
 
     private Item icon(String id) {

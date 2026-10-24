@@ -10,7 +10,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 public final class HudPlacementScreen extends Screen {
-    private static final List<HudPanel> PANELS = List.of(TallyHud.INSTANCE, CurrencyHud.INSTANCE, DungeonHud.INSTANCE);
+    private static final List<HudPanel> PANELS = List.of(TowersHud.INSTANCE, MithrilTallyHud.INSTANCE, MithrilHud.INSTANCE, TallyHud.INSTANCE, CurrencyHud.INSTANCE, DungeonHud.INSTANCE);
     private final Screen parent;
     private HudPanel dragging;
     private double grabX;
@@ -23,6 +23,7 @@ public final class HudPlacementScreen extends Screen {
 
     @Override
     protected void init() {
+        TowersHud.INSTANCE.preview(true);
         this.addRenderableWidget(new ArdaButton("Reset Positions", 8, this.height - 28, 105, 20, () -> {
             PANELS.forEach(HudPanel::reset);
             ArdaStore.save();
@@ -97,6 +98,7 @@ public final class HudPlacementScreen extends Screen {
 
     @Override
     public void onClose() {
+        TowersHud.INSTANCE.preview(false);
         ArdaStore.save();
         this.minecraft.gui.setScreen(this.parent);
     }

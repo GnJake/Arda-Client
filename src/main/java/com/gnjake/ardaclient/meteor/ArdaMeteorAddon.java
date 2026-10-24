@@ -1,7 +1,9 @@
 package com.gnjake.ardaclient.meteor;
 
 import com.gnjake.ardaclient.ArdaClient;
+import com.gnjake.ardaclient.waypoint.SkirmishWaypoints;
 import java.util.List;
+import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.systems.hud.Hud;
@@ -20,9 +22,13 @@ public class ArdaMeteorAddon extends MeteorAddon {
         modules.forEach(Modules.get()::add);
         ClientTickEvents.END_CLIENT_TICK.register(client -> modules.forEach(ArdaModule::sync));
 
+        SkirmishWaypoints.register(new MeteorWaypoints());
+        MeteorClient.EVENT_BUS.subscribe(new TunnelHighlights());
         Hud.get().register(ArdaHudElement.DUNGEONS);
         Hud.get().register(ArdaHudElement.CURRENCY);
         Hud.get().register(ArdaHudElement.TALLY);
+        Hud.get().register(ArdaHudElement.MITHRIL);
+        Hud.get().register(ArdaHudElement.MITHRIL_TALLY);
     }
 
     @Override

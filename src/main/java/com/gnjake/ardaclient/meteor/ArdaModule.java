@@ -35,6 +35,18 @@ public final class ArdaModule extends Module {
                 () -> ArdaStore.data.currencyHud, value -> ArdaStore.data.currencyHud = value),
             new ArdaModule("currency-tally", "Currency earned over the last hour, 3 hours, 12 hours, day and week.",
                 () -> ArdaStore.data.tallyHud, value -> ArdaStore.data.tallyHud = value),
+            new ArdaModule("mithril-counter", "Your Mithril (Crude Mithril Ore).",
+                () -> ArdaStore.data.mithrilHud, value -> ArdaStore.data.mithrilHud = value),
+            new ArdaModule("mithril-tally", "Mithril earned over the last hour, 3 hours, 12 hours, day and week.",
+                () -> ArdaStore.data.mithrilTallyHud, value -> ArdaStore.data.mithrilTallyHud = value),
+            new ArdaModule("profit-estimate", "Estimated dungeon and skirmish profits in chat when you start or finish one.",
+                () -> ArdaStore.data.profitChat, value -> ArdaStore.data.profitChat = value),
+            new ArdaModule("towers-panel", "Who holds each tower and each clan's estimated points, during the Towers Event.",
+                () -> ArdaStore.data.towersHud, value -> ArdaStore.data.towersHud = value),
+            new ArdaModule("tunnel-pathfinder", "Finds and marks a walking path to the next tunnel spawner. Turn it off if it lags.",
+                () -> ArdaStore.data.tunnelPath, value -> ArdaStore.data.tunnelPath = value),
+            new ArdaModule("tunnel-xray", "Outlines logged tunnel spawners through walls and draws the tunnel path as highlighted blocks.",
+                () -> ArdaStore.data.tunnelXray, value -> ArdaStore.data.tunnelXray = value),
             new ArdaModule("price-tooltips", "Encyclopedia prices in item tooltips.",
                 () -> ArdaStore.data.pricingTooltips, value -> ArdaStore.data.pricingTooltips = value)
         );

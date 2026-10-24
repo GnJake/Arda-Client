@@ -5,10 +5,23 @@ plugins {
 val archivesBaseName = providers.gradleProperty("archives_base_name").get()
 val mavenGroup = providers.gradleProperty("maven_group").get()
 
+// `./gradlew build -Pdev` makes a developer build, which can record structures; it is never released.
+val devBuild = providers.gradleProperty("dev").isPresent
+
 base {
     archivesName = archivesBaseName
-    version = libs.versions.mod.version.get()
+    version = libs.versions.mod.version.get() + if (devBuild) "-dev" else ""
     group = mavenGroup
+}
+
+sourceSets {
+    main {
+        java {
+            if (!devBuild) {
+                exclude("com/gnjake/ardaclient/structure/dev/**")
+            }
+        }
+    }
 }
 
 repositories {
@@ -19,6 +32,17 @@ repositories {
     maven {
         name = "meteor-maven-snapshots"
         url = uri("https://maven.meteordev.org/snapshots")
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter {
+            includeGroup("maven.modrinth")
+        }
     }
 }
 
@@ -31,6 +55,9 @@ dependencies {
     // Meteor (optional at runtime: only classes in the meteor package may use it)
     compileOnly(libs.meteor.client)
     localRuntime(libs.meteor.client)
+
+    // Xaero's Minimap (optional at runtime: only classes in the xaero package may use it)
+    compileOnly(libs.xaero.minimap)
 }
 
 java {

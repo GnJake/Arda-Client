@@ -20,7 +20,7 @@ public final class TallyHud extends HudPanel {
     }
 
     private static long earned(int window, long now) {
-        return CurrencyTracker.earned(CurrencyLedger.WINDOWS[window], now);
+        return CurrencyTracker.CURRENCY.earned(CurrencyLedger.WINDOWS[window], now);
     }
 
     private static String gems(int window, long now) {
@@ -104,8 +104,8 @@ public final class TallyHud extends HudPanel {
     protected void draw(GuiGraphicsExtractor graphics, Font font, int width, int height, long now) {
         ArdaTheme.frame(graphics, 0, 0, width, height, opacity());
         ArdaTheme.header(graphics, 0, 0, width, HEADER, opacity());
-        ArdaTheme.mark(graphics, PAD + 2, 4, ArdaTheme.accent());
-        graphics.text(font, TITLE, PAD + 7, 2, ArdaTheme.TEXT);
+        ArdaTheme.mark(graphics, PAD + 2, 4);
+        ArdaTheme.titleText(graphics, font, TITLE, PAD + 7, 2);
         int rowY = HEADER + 3;
         int changeX = width - PAD - changeWidth(font, now);
         for (int window = 0; window < CurrencyLedger.WINDOWS.length; window++) {

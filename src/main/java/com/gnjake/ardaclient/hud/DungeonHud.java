@@ -94,8 +94,8 @@ public final class DungeonHud extends HudPanel {
     protected void draw(GuiGraphicsExtractor graphics, Font font, int width, int height, long now) {
         ArdaTheme.frame(graphics, 0, 0, width, height, opacity());
         ArdaTheme.header(graphics, 0, 0, width, HEADER, opacity());
-        ArdaTheme.mark(graphics, PAD + 2, 4, ArdaTheme.accent());
-        graphics.text(font, "Dungeons", PAD + 7, 2, ArdaTheme.TEXT);
+        ArdaTheme.mark(graphics, PAD + 2, 4);
+        ArdaTheme.titleText(graphics, font, "Dungeons", PAD + 7, 2);
         int rowY = HEADER + 3;
         if (shownCount() == 0) {
             graphics.text(font, "No dungeons selected", PAD, rowY + 1, ArdaTheme.MUTED);

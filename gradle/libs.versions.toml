@@ -1,5 +1,5 @@
 [versions]
-mod-version = "0.1.0"
+mod-version = "0.1.1"
 
 # Fabric (https://fabricmc.net/develop)
 jdk = "25"
@@ -13,6 +13,9 @@ loom = "1.18-SNAPSHOT"
 # Meteor (https://github.com/MeteorDevelopment/meteor-client/)
 meteor = "26.2-SNAPSHOT"
 
+# Xaero's Minimap (https://modrinth.com/mod/xaeros-minimap)
+xaero-minimap = "fabric-26.2-26.6.1"
+
 # Mods
 
 [libraries]
@@ -23,6 +26,9 @@ fabric-api = { module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fab
 
 # Meteor client
 meteor-client = { module = "meteordevelopment:meteor-client", version.ref = "meteor" }
+
+# Xaero's Minimap
+xaero-minimap = { module = "maven.modrinth:xaeros-minimap", version.ref = "xaero-minimap" }
 
 # Mods
 

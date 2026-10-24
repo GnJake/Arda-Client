@@ -36,7 +36,9 @@ public final class ArdaSlider extends AbstractSliderButton {
         g.fill(x + 1, y + 1, this.getRight() - 1, this.getBottom() - 1, hot ? ArdaTheme.HOVER : ArdaTheme.ROW_ALT);
         g.outline(x, y, this.getWidth(), this.getHeight(), hot ? ArdaTheme.accent() : ArdaTheme.BORDER);
         int filled = (int)Math.round((this.getWidth() - 2) * this.value);
-        g.fill(x + 1, this.getBottom() - 3, x + 1 + filled, this.getBottom() - 1, ArdaTheme.accent());
+        double fraction = (double)filled / Math.max(1, this.getWidth() - 2);
+        ArdaTheme.horizontalGradient(g, x + 1, this.getBottom() - 3, x + 1 + filled, this.getBottom() - 1,
+            amount -> ArdaTheme.accentAt(amount * fraction));
         int handle = x + 1 + Math.min(this.getWidth() - 5, Math.max(0, filled - 2));
         g.fill(handle, y + 2, handle + 3, this.getBottom() - 2, hot ? ArdaTheme.accentBright() : ArdaTheme.MUTED);
         g.centeredText(Minecraft.getInstance().font, this.getMessage(), x + this.getWidth() / 2, y + (this.getHeight() - 8) / 2, ArdaTheme.TEXT);
