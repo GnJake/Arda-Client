@@ -1,9 +1,13 @@
 package com.gnjake.ardaclient;
 
 import com.gnjake.ardaclient.config.ArdaStore;
+import com.gnjake.ardaclient.currency.CraftingPanel;
+import com.gnjake.ardaclient.currency.CurrencyCrafter;
 import com.gnjake.ardaclient.currency.CurrencyLedger;
 import com.gnjake.ardaclient.currency.CurrencyTracker;
+import com.gnjake.ardaclient.debug.PerfMonitor;
 import com.gnjake.ardaclient.dungeon.DungeonTracker;
+import com.gnjake.ardaclient.dungeon.WardTracker;
 import com.gnjake.ardaclient.encyclopedia.CatalogDrafts;
 import com.gnjake.ardaclient.encyclopedia.EncyclopediaScreen;
 import com.gnjake.ardaclient.encyclopedia.PriceCatalog;
@@ -14,6 +18,7 @@ import com.gnjake.ardaclient.hud.HudPanel;
 import com.gnjake.ardaclient.hud.HudPlacementScreen;
 import com.gnjake.ardaclient.hud.MithrilHud;
 import com.gnjake.ardaclient.hud.TowersHud;
+import com.gnjake.ardaclient.hud.WardHud;
 import com.gnjake.ardaclient.structure.TowerEvent;
 import com.gnjake.ardaclient.hud.MithrilTallyHud;
 import com.gnjake.ardaclient.hud.TallyHud;
@@ -38,6 +43,9 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import net.minecraft.client.gui.screens.inventory.CraftingScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.client.Minecraft;
@@ -69,29 +77,32 @@ public final class ArdaClient implements ClientModInitializer {
         wheelKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.arda-client.quick_wheel", Type.MOUSE, 2, category));
         pricingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.arda-client.pricing", Type.KEYSYM, -1, category));
         dungeonHudKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.arda-client.dungeon_hud", Type.KEYSYM, -1, category));
-        ClientReceiveMessageEvents.MODIFY_GAME.register(ProfitEstimator::annotate);
-        ClientReceiveMessageEvents.MODIFY_GAME.register(SkirmishWaypoints::annotate);
+        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> PerfMonitor.time("profit annotate", () -> ProfitEstimator.annotate(message, overlay)));
+        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> PerfMonitor.time("waypoint annotate", () -> SkirmishWaypoints.annotate(message, overlay)));
         if (SkirmishWaypoints.xaeroInstalled()) {
             // Only touched when Xaero's Minimap is installed, so its classes are never loaded without it.
             XaeroWaypoints.register();
         }
 
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> PerfMonitor.time("chat messages", () -> {
             DungeonTracker.onMessage(message);
             if (!overlay) {
                 ProfitEstimator.onMessage(message);
                 StructureLogger.onMessage(message);
                 TowerEvent.onMessage(message);
             }
-        });
+        }));
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receivedTime) -> DungeonTracker.onMessage(message));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            TowerEvent.tick(client);
-            QuickWheel.tick(client);
-            DungeonTracker.tick(System.currentTimeMillis());
-            CurrencyTracker.tick(client);
-            ProfitEstimator.tick(client);
-            TunnelPathfinder.tick(client);
+            HudPanel.tick();
+            PerfMonitor.time("towers tick", () -> TowerEvent.tick(client));
+            PerfMonitor.time("wheel tick", () -> QuickWheel.tick(client));
+            PerfMonitor.time("dungeon tick", () -> DungeonTracker.tick(System.currentTimeMillis()));
+            PerfMonitor.time("currency tick", () -> CurrencyTracker.tick(client));
+            PerfMonitor.time("crafting tick", () -> CurrencyCrafter.tick(client));
+            PerfMonitor.time("profit tick", () -> ProfitEstimator.tick(client));
+            PerfMonitor.time("ward tick", () -> WardTracker.tick(client));
+            PerfMonitor.time("tunnel path tick", () -> TunnelPathfinder.tick(client));
 
             while (pricingKey.consumeClick()) {
                 if (client.player != null && client.gui.screen() == null) {
@@ -104,18 +115,29 @@ public final class ArdaClient implements ClientModInitializer {
                 ArdaStore.save();
             }
         });
+        ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+            if (screen instanceof CraftingScreen crafting) {
+                CraftingPanel.attach(crafting, Screens.getWidgets(crafting));
+            }
+        });
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath(MOD_ID, "perf"), (graphics, tick) -> PerfMonitor.frame());
         attachHud("dungeons", DungeonHud.INSTANCE);
         attachHud("currency", CurrencyHud.INSTANCE);
         attachHud("tally", TallyHud.INSTANCE);
         attachHud("mithril", MithrilHud.INSTANCE);
         attachHud("mithril_tally", MithrilTallyHud.INSTANCE);
         attachHud("towers", TowersHud.INSTANCE);
+        attachHud("ward", WardHud.INSTANCE);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> CurrencyLedger.saveNow());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> CurrencyLedger.saveNow());
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> dispatcher.register(
             ClientCommands.literal(MOD_ID)
                 .then(ClientCommands.literal("item").executes(command -> logHeldItem()))
                 .then(ClientCommands.literal("scoreboard").executes(command -> logScoreboard()))
+                .then(ClientCommands.literal("perf")
+                    .executes(command -> PerfMonitor.start(30))
+                    .then(ClientCommands.argument("seconds", IntegerArgumentType.integer(5, 600))
+                        .executes(command -> PerfMonitor.start(IntegerArgumentType.getInteger(command, "seconds")))))
                 .then(waypointCommand(SkirmishWaypoints.Target.SKIRMISH))
                 .then(waypointCommand(SkirmishWaypoints.Target.MIRAGE))
         ));
@@ -124,9 +146,11 @@ public final class ArdaClient implements ClientModInitializer {
 
     private static void attachHud(String name, HudPanel panel) {
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath(MOD_ID, name), (graphics, tick) -> {
-            if (showHud() && panel.shown(System.currentTimeMillis())) {
-                panel.render(graphics);
-            }
+            PerfMonitor.time("hud " + name, () -> {
+                if (showHud() && panel.shown(System.currentTimeMillis())) {
+                    panel.render(graphics);
+                }
+            });
         });
     }
 

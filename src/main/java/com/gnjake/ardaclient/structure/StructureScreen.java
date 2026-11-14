@@ -33,6 +33,8 @@ public final class StructureScreen extends ArdaPanelScreen {
     private ArdaButton extra;
     /** Adds the shown kind to the map in its own group. */
     private ArdaButton export;
+    /** Removes the shown kind's waypoints from the map. */
+    private ArdaButton clear;
     private int statusTop;
     private int listTop;
     private int rows;
@@ -45,7 +47,7 @@ public final class StructureScreen extends ArdaPanelScreen {
 
     @Override
     protected void init() {
-        this.layout(460, 236);
+        this.layout(460, 246);
         int x = this.px + 10;
         int y = this.py + 31;
         // Recording structures is only in developer builds; release builds ship the list.
@@ -62,21 +64,30 @@ public final class StructureScreen extends ArdaPanelScreen {
 
         y += 24;
         x = this.px + 10;
+        int tab = (this.pw - 20 - 6 * 3) / 4;
         for (StructureLog.Kind each : StructureLog.Kind.values()) {
-            this.tabs[each.ordinal()] = this.button(each.plural, x, y, 58, () -> {
+            this.tabs[each.ordinal()] = this.button(each.plural, x, y, tab, () -> {
                 this.kind = each;
                 this.scroll = 0;
                 this.refreshTabs();
             });
-            x += 62;
+            x += tab + 6;
         }
 
-        WaypointProvider provider = SkirmishWaypoints.provider();
-        this.export = this.button("", x + 2, y, 74, () -> this.export(this.kind.plural, List.of(this.kind)));
-        this.export.active = provider != null;
-        ArdaButton all = this.button("Add All", x + 80, y, 48, () -> this.export(ALL_GROUP, List.of(StructureLog.Kind.values())));
-        all.active = provider != null;
-        x += 134;
+        // Adding and clearing waypoints, for the shown kind or every kind, then the tab's own button.
+        y += 24;
+        x = this.px + 10;
+        int action = (this.pw - 20 - 6 * 4) / 5;
+        boolean mapped = SkirmishWaypoints.provider() != null;
+        this.export = this.button("", x, y, action, () -> this.export(this.kind.plural, List.of(this.kind)));
+        ArdaButton all = this.button("Add All", x + action + 6, y, action, () -> this.export(ALL_GROUP, List.of(StructureLog.Kind.values())));
+        this.clear = this.button("", x + 2 * (action + 6), y, action, () -> this.clear(List.of(this.kind)));
+        ArdaButton clearAll = this.button("Clear All", x + 3 * (action + 6), y, action, () -> this.clear(List.of(StructureLog.Kind.values())));
+        for (ArdaButton button : List.of(this.export, all, this.clear, clearAll)) {
+            button.active = mapped;
+        }
+
+        x += 4 * (action + 6);
         this.extra = this.button("", x, y, this.px + this.pw - 10 - x, () -> {
             if (this.kind == StructureLog.Kind.TOWER) {
                 TowersHud.cycleMode();
@@ -99,6 +110,7 @@ public final class StructureScreen extends ArdaPanelScreen {
         }
 
         this.export.setMessage("Add " + this.kind.plural);
+        this.clear.setMessage("Clear " + this.kind.plural);
         this.extra.setMessage(this.kind == StructureLog.Kind.TOWER ? TowersHud.modeLabel().replace("Towers: ", "Panel: ") : "Reset Done");
     }
 
@@ -119,6 +131,41 @@ public final class StructureScreen extends ArdaPanelScreen {
             return;
         }
 
+        try {
+            this.message = provider.addGroup(group, markers(kinds));
+        } catch (RuntimeException | LinkageError e) {
+            this.message = "Could not add the waypoints; see the log.";
+            com.gnjake.ardaclient.ArdaClient.LOG.warn("Could not add {} waypoints", group, e);
+        }
+    }
+
+    /**
+     * Removes the structure waypoints of the given kinds that Arda Client added, from each kind's group and from
+     * "All Structures". Waypoints the player made themselves stay.
+     */
+    private void clear(List<StructureLog.Kind> kinds) {
+        WaypointProvider provider = SkirmishWaypoints.provider();
+        if (provider == null) {
+            return;
+        }
+
+        try {
+            int removed = provider.removeGroup(ALL_GROUP, markers(kinds));
+            for (StructureLog.Kind each : kinds) {
+                removed += provider.removeGroup(each.plural, markers(List.of(each)));
+            }
+
+            String what = kinds.size() == 1 ? kinds.getFirst().singular.toLowerCase(java.util.Locale.ROOT) : "structure";
+            this.message = "Removed " + removed + " " + what + " waypoint" + (removed == 1 ? "" : "s") + " from " + provider.name() + ".";
+        } catch (RuntimeException | LinkageError e) {
+            this.message = "Could not remove the waypoints; see the log.";
+            com.gnjake.ardaclient.ArdaClient.LOG.warn("Could not remove structure waypoints", e);
+        }
+    }
+
+    /** One waypoint per structure of the given kinds, named and placed the way {@link #export} adds them. */
+    /** Waypoint markers for every logged structure of these kinds, named as they are when added to a waypoint mod. */
+    public static List<WaypointProvider.Marker> markers(List<StructureLog.Kind> kinds) {
         List<WaypointProvider.Marker> markers = new ArrayList<>();
         for (StructureLog.Kind each : kinds) {
             List<StructureLog.Structure> entries = StructureLog.of(each);
@@ -131,12 +178,7 @@ public final class StructureScreen extends ArdaPanelScreen {
             }
         }
 
-        try {
-            this.message = provider.addGroup(group, markers);
-        } catch (RuntimeException | LinkageError e) {
-            this.message = "Could not add the waypoints; see the log.";
-            com.gnjake.ardaclient.ArdaClient.LOG.warn("Could not add {} waypoints", group, e);
-        }
+        return markers;
     }
 
     @Override

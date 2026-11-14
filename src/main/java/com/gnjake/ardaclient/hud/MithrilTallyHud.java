@@ -18,8 +18,18 @@ public final class MithrilTallyHud extends HudPanel {
     private MithrilTallyHud() {
     }
 
+    /** Each period's amount, worked out once a tick. */
+    private static final PerTick<String[]> AMOUNTS = new PerTick<>();
+
     private static String amount(int window, long now) {
-        return String.valueOf(CurrencyTracker.MITHRIL.earned(CurrencyLedger.WINDOWS[window], now));
+        return AMOUNTS.get(() -> {
+            String[] amounts = new String[CurrencyLedger.WINDOWS.length];
+            for (int index = 0; index < amounts.length; index++) {
+                amounts[index] = String.valueOf(CurrencyTracker.MITHRIL.earned(CurrencyLedger.WINDOWS[index], now));
+            }
+
+            return amounts;
+        })[window];
     }
 
     private static HudPanel above(long now) {

@@ -8,6 +8,7 @@ import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.systems.hud.Hud;
 import meteordevelopment.meteorclient.systems.modules.Modules;
+import com.gnjake.ardaclient.debug.PerfMonitor;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
 /**
@@ -20,9 +21,11 @@ public class ArdaMeteorAddon extends MeteorAddon {
         ArdaClient.LOG.info("Meteor Client detected, enabling Meteor features");
         List<ArdaModule> modules = ArdaModule.create();
         modules.forEach(Modules.get()::add);
-        ClientTickEvents.END_CLIENT_TICK.register(client -> modules.forEach(ArdaModule::sync));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> PerfMonitor.time("meteor module sync", () -> modules.forEach(ArdaModule::sync)));
 
-        SkirmishWaypoints.register(new MeteorWaypoints());
+        MeteorWaypoints waypoints = new MeteorWaypoints();
+        SkirmishWaypoints.register(waypoints);
+        ClientTickEvents.END_CLIENT_TICK.register(client -> PerfMonitor.time("meteor waypoints tick", () -> waypoints.tick(client)));
         MeteorClient.EVENT_BUS.subscribe(new TunnelHighlights());
         Hud.get().register(ArdaHudElement.DUNGEONS);
         Hud.get().register(ArdaHudElement.CURRENCY);

@@ -23,6 +23,10 @@ import xaero.hud.path.XaeroPath;
  * and it is only loaded when Xaero's Minimap is installed.
  */
 public final class XaeroWaypoints implements WaypointProvider {
+    private static final String NOT_READY = "Xaero's Minimap isn't ready yet. Try again in a moment.";
+
+    /** Why {@link #world()} last came back empty. */
+    private String problem = NOT_READY;
 
     /** Called only once {@link SkirmishWaypoints#xaeroInstalled()} has checked that Xaero's Minimap is there. */
     public static void register() {
@@ -43,7 +47,7 @@ public final class XaeroWaypoints implements WaypointProvider {
     public String add(String setName, String name, String initials, int x, int y, int z) {
         MinimapWorld world = this.world();
         if (world == null) {
-            return "Xaero's Minimap isn't ready yet. Try again in a moment.";
+            return this.problem;
         }
 
         WaypointSet set = world.getWaypointSet(setName);
@@ -67,7 +71,7 @@ public final class XaeroWaypoints implements WaypointProvider {
     public String addGroup(String group, List<Marker> markers) {
         MinimapWorld world = this.world();
         if (world == null) {
-            return "Xaero's Minimap isn't ready yet. Try again in a moment.";
+            return this.problem;
         }
 
         WaypointSet set = world.getWaypointSet(group);
@@ -91,6 +95,31 @@ public final class XaeroWaypoints implements WaypointProvider {
 
         this.save(world);
         return "Added " + added + " of " + markers.size() + " to Xaero's \"" + group + "\" waypoints in Harad.";
+    }
+
+    @Override
+    public int removeGroup(String group, List<Marker> markers) {
+        MinimapWorld world = this.world();
+        WaypointSet set = world == null ? null : world.getWaypointSet(group);
+        if (set == null) {
+            return 0;
+        }
+
+        List<Waypoint> ours = new ArrayList<>();
+        for (Waypoint waypoint : set.getWaypoints()) {
+            if (markers.stream().anyMatch(marker -> marker.x() == waypoint.getX() && marker.y() == waypoint.getY() && marker.z() == waypoint.getZ())) {
+                ours.add(waypoint);
+            }
+        }
+
+        set.removeAll(ours);
+        // An empty set goes too, unless Xaero is showing it.
+        if (set.isEmpty() && !group.equals(world.getCurrentWaypointSetId())) {
+            world.removeWaypointSet(group);
+        }
+
+        this.save(world);
+        return ours.size();
     }
 
     @Override
@@ -123,32 +152,46 @@ public final class XaeroWaypoints implements WaypointProvider {
     }
 
     /**
-     * Xaero's waypoint world for Harad on this server. In Harad that is the world Xaero is showing; elsewhere it is
-     * Harad's world with the same name as the current one, which Xaero creates if it is missing.
+     * Xaero's waypoint world for Harad on this server: the first world in Harad's dimension folder, which Xaero
+     * creates if it is missing. Null, with {@link #problem} saying why, when it can't be found; a waypoint is never
+     * put anywhere else, or it would show in whatever dimension the player is in.
      */
     private MinimapWorld world() {
         MinimapSession session = BuiltInHudModules.MINIMAP.getCurrentSession();
         Minecraft minecraft = Minecraft.getInstance();
-        if (session == null || minecraft.level == null) {
+        MinimapWorld current = session == null || minecraft.level == null ? null : session.getWorldManager().getCurrentWorld();
+        if (current == null) {
+            this.problem = NOT_READY;
             return null;
         }
 
         MinimapWorldManager manager = session.getWorldManager();
-        MinimapWorld current = manager.getCurrentWorld();
-        if (minecraft.level.dimension() == SkirmishWaypoints.HARAD || current == null) {
-            return current;
+        String directory = session.getDimensionHelper().getDimensionDirectoryName(SkirmishWaypoints.HARAD);
+        MinimapWorldRootContainer root = current.getContainer().getRoot();
+        MinimapWorldContainer container = null;
+        for (MinimapWorldContainer each : root.getSubContainers()) {
+            if (each.getLastNode().equalsIgnoreCase(directory)) {
+                container = each;
+            }
         }
 
-        MinimapWorldRootContainer root = manager.getCurrentRootContainer();
-        String directory = session.getDimensionHelper().getDimensionDirectoryName(SkirmishWaypoints.HARAD);
-        XaeroPath containerPath = root.getPath().resolve(directory);
-        MinimapWorld harad = manager.getWorld(containerPath.resolve(current.getNode()));
+        if (container == null) {
+            container = manager.getWorldContainer(root.getPath().resolve(directory));
+        }
+
+        // In Harad, the world Xaero is showing is the one to use; elsewhere, Harad's first world.
+        MinimapWorld harad = current.getContainer() == container ? current : container.getFirstWorld();
         if (harad == null) {
-            MinimapWorldContainer container = manager.getWorldContainer(containerPath);
-            harad = container.getFirstWorld();
-            if (harad == null) {
-                harad = container.addWorld(current.getNode());
-            }
+            harad = container.addWorld(current.getNode());
+        }
+
+        String where = harad.getContainer().getLastNode();
+        ArdaClient.LOG.info("Xaero waypoints go to {} (player in {}, Xaero showing {})", harad.getFullPath(), minecraft.level.dimension().identifier(),
+            current.getFullPath());
+        if (!where.equalsIgnoreCase(directory) || harad == current && minecraft.level.dimension() != SkirmishWaypoints.HARAD) {
+            ArdaClient.LOG.warn("Xaero's Harad waypoints resolved to {}, not {}; nothing was added", harad.getFullPath(), directory);
+            this.problem = "Couldn't find Xaero's Harad waypoints, so nothing was added. See the log.";
+            return null;
         }
 
         if (harad.getDimId() == null) {

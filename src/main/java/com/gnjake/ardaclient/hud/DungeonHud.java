@@ -12,7 +12,26 @@ public final class DungeonHud extends HudPanel {
     private static final int ROW = 10;
     private static final int GAP = 8;
 
+    /** Each tier's status, and the prompt below the table, worked out once a tick. */
+    private static final PerTick<String[]> STATUSES = new PerTick<>();
+    private static final PerTick<String> PROMPT = new PerTick<>();
+
     private DungeonHud() {
+    }
+
+    private static String status(int tier, long now) {
+        return STATUSES.get(() -> {
+            String[] statuses = new String[DungeonTracker.TIERS];
+            for (int index = 1; index <= DungeonTracker.TIERS; index++) {
+                statuses[index - 1] = DungeonTracker.status(DungeonTracker.entry(index), now);
+            }
+
+            return statuses;
+        })[tier - 1];
+    }
+
+    private static String prompt(long now) {
+        return PROMPT.get(() -> DungeonTracker.prompt(now));
     }
 
     @Override
@@ -58,7 +77,7 @@ public final class DungeonHud extends HudPanel {
 
         for (int tier = 1; tier <= DungeonTracker.TIERS; tier++) {
             if (ArdaStore.data.shownDungeons[tier - 1]) {
-                width = Math.max(width, font.width(DungeonTracker.status(DungeonTracker.entry(tier), now)));
+                width = Math.max(width, font.width(status(tier, now)));
             }
         }
 
@@ -70,14 +89,14 @@ public final class DungeonHud extends HudPanel {
         int table = shownCount() == 0
             ? font.width("No dungeons selected")
             : numberWidth(font) + nameWidth(font) + GAP + statusWidth(font, now);
-        String prompt = DungeonTracker.prompt(now);
+        String prompt = prompt(now);
         return PAD * 2 + Math.max(Math.max(table, font.width(prompt)), font.width("Dungeons") + 7);
     }
 
     @Override
     protected int contentHeight(Font font, long now) {
         int rows = Math.max(1, shownCount());
-        return HEADER + 3 + rows * ROW + (DungeonTracker.prompt(now).isEmpty() ? 0 : ROW + 2) + 2;
+        return HEADER + 3 + rows * ROW + (prompt(now).isEmpty() ? 0 : ROW + 2) + 2;
     }
 
     @Override
@@ -107,7 +126,7 @@ public final class DungeonHud extends HudPanel {
         for (int tier = 1; tier <= DungeonTracker.TIERS; tier++) {
             if (ArdaStore.data.shownDungeons[tier - 1]) {
                 ArdaStore.DungeonTier entry = DungeonTracker.entry(tier);
-                String status = DungeonTracker.status(entry, now);
+                String status = status(tier, now);
                 int color = switch (entry.state) {
                     case "OPEN" -> ArdaTheme.GREEN;
                     case "ACTIVE" -> ArdaTheme.accentBright();
@@ -126,7 +145,7 @@ public final class DungeonHud extends HudPanel {
             }
         }
 
-        String prompt = DungeonTracker.prompt(now);
+        String prompt = prompt(now);
         if (!prompt.isEmpty()) {
             graphics.fill(1, rowY + 1, width - 1, rowY + 2, ArdaTheme.fade(ArdaTheme.DIVIDER, opacity()));
             graphics.text(font, prompt, PAD, rowY + 4, ArdaTheme.MUTED);

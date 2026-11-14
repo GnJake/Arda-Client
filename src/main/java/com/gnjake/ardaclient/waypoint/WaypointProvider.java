@@ -28,6 +28,12 @@ public interface WaypointProvider {
      */
     String addGroup(String group, List<Marker> markers);
 
+    /**
+     * Removes the waypoints {@link #addGroup} added: those at a marker's position in the group (Xaero drops the set
+     * once it is empty). Waypoints the player made themselves stay. Returns how many were removed.
+     */
+    int removeGroup(String group, List<Marker> markers);
+
     /** One waypoint for {@link #addGroup}. {@code initials} is the short label Xaero shows on the map. */
     record Marker(String name, String initials, int x, int y, int z) {
     }

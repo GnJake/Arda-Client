@@ -23,6 +23,10 @@ public final class TunnelHighlights {
 
     @EventHandler
     private void onRender(Render3DEvent event) {
+        com.gnjake.ardaclient.debug.PerfMonitor.time("meteor tunnel xray", () -> this.draw(event));
+    }
+
+    private void draw(Render3DEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (!ArdaStore.data.tunnelXray || minecraft.player == null || !StructureLogger.inHarad(minecraft)) {
             return;

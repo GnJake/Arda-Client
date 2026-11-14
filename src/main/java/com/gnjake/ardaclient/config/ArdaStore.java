@@ -17,7 +17,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import net.fabricmc.loader.api.FabricLoader;
@@ -161,6 +163,10 @@ public final class ArdaStore {
             data.commands = new ArrayList<>();
         }
 
+        if (data.wardRuns == null) {
+            data.wardRuns = new ArrayList<>();
+        }
+
         if (data.dungeons == null) {
             data.dungeons = new ArrayList<>();
         }
@@ -195,7 +201,7 @@ public final class ArdaStore {
 
         data.dungeons.removeIf(entry -> entry.tier < 1 || entry.tier > DungeonTracker.TIERS);
         data.dungeons.sort(Comparator.comparingInt(entry -> entry.tier));
-        data.settings.scale = Math.max(0.65, Math.min(1.35, data.settings.scale));
+        data.settings.scale = Math.max(0.25, Math.min(1.35, data.settings.scale));
         data.settings.opacity = Math.max(0.35, Math.min(1.0, data.settings.opacity));
         if (data.settings.chroniclesCommand == null) {
             data.settings.chroniclesCommand = "/chronicles";
@@ -254,6 +260,9 @@ public final class ArdaStore {
         data.towersScale = scale(data.towersScale);
         data.towersLeft = Math.max(0, data.towersLeft);
         data.towersTop = Math.max(0, data.towersTop);
+        data.wardScale = scale(data.wardScale);
+        data.wardLeft = Math.max(0, data.wardLeft);
+        data.wardTop = Math.max(0, data.wardTop);
         data.accentColor &= 0xFFFFFF;
         if (data.waypointType == null) {
             data.waypointType = "xaero";
@@ -346,6 +355,14 @@ public final class ArdaStore {
         public boolean towersDocked = true;
         public int towersLeft = DEFAULT_LEFT;
         public int towersTop = DEFAULT_TOP;
+        /** Magical Ward lost and regained in dungeons, shown while a dungeon runs or ward is on screen. */
+        public boolean wardHud = true;
+        public double wardScale = DEFAULT_SCALE;
+        public boolean wardDocked = true;
+        public int wardLeft = DEFAULT_LEFT;
+        public int wardTop = DEFAULT_TOP;
+        /** The last {@link com.gnjake.ardaclient.dungeon.WardTracker#MAX_RUNS} dungeon levels' ward, oldest first. */
+        public List<WardRun> wardRuns = new ArrayList<>();
         public int accentColor = DEFAULT_ACCENT;
         /** Blends accents from {@link #accentColor} through each of {@link #gradientColors} in turn. */
         public boolean accentGradient = false;
@@ -379,6 +396,37 @@ public final class ArdaStore {
         DungeonTier(int tier) {
             this.tier = tier;
         }
+    }
+
+    /** One dungeon level's Magical Ward. */
+    public static final class WardRun {
+        public int tier;
+        public long startedAt;
+        public long endedAt;
+        /** Taken off by hits. */
+        public double lost;
+        /** Regenerated charge. Kept under its first name so older saves still load. */
+        public double regained;
+        /** What the player ate or drank during the run, by name, and the ward each gave. */
+        public Map<String, Consumed> items = new LinkedHashMap<>();
+        /** Whether the ward was on screen during the run; runs without it aren't kept. */
+        public transient boolean seen;
+        /** Whether the level was started, not just arrived at. */
+        public transient boolean started;
+
+        public Consumed item(String name) {
+            if (this.items == null) {
+                this.items = new LinkedHashMap<>();
+            }
+
+            return this.items.computeIfAbsent(name, key -> new Consumed());
+        }
+    }
+
+    /** How many of one food or potion a run used, and the ward they gave. */
+    public static final class Consumed {
+        public int count;
+        public double ward;
     }
 
     public static final class QuickCommand {

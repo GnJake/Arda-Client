@@ -20,12 +20,17 @@ import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
  * Finds a walking path from the player to the nearest tunnel spawner not yet completed, with A* over the blocks the
- * client has loaded, and marks it with a trail of particles. The search runs a little each tick so it never stalls
- * the game. A spawner beyond the loaded area gets a path to the loaded block closest to it, extended as the player
- * walks. It only runs underground.
+ * client has loaded, and marks it with a trail of particles. It updates every 10 ticks, and a search runs a little
+ * each tick until it's done so it never stalls the game. A spawner beyond the loaded area gets a path to the loaded
+ * block closest to it, extended as the player walks. It only runs underground.
  */
 public final class TunnelPathfinder {
-    /** Nodes expanded per tick. */
+    /**
+     * Ticks between updates: picking the next tunnel, checking whether the path is out of date, and drawing the particle
+     * trail.
+     */
+    private static final int UPDATE_EVERY = 10;
+    /** Nodes expanded per tick while a search is under way. */
     private static final int BUDGET = 2000;
     private static final int MAX_NODES = 120_000;
     private static final long RECOMPUTE_AFTER = 15_000L;
@@ -76,6 +81,18 @@ public final class TunnelPathfinder {
     }
 
     public static void tick(Minecraft minecraft) {
+        // A search under way keeps its slice every tick, so a new path still shows up quickly.
+        if (search != null && ArdaStore.data.tunnelPath && minecraft.level != null && search.step(BUDGET)) {
+            path = search.result();
+            complete = search.reached;
+            foundAt = System.currentTimeMillis();
+            search = null;
+        }
+
+        if (++ticks % UPDATE_EVERY != 0) {
+            return;
+        }
+
         if (!ArdaStore.data.tunnelPath || minecraft.player == null || minecraft.level == null || !StructureLogger.inHarad(minecraft)) {
             clear();
             return;
@@ -103,14 +120,7 @@ public final class TunnelPathfinder {
             search = new Search(minecraft.level, here, next.pos());
         }
 
-        if (search != null && search.step(BUDGET)) {
-            path = search.result();
-            complete = search.reached;
-            foundAt = now;
-            search = null;
-        }
-
-        if (++ticks % 6 == 0 && now - highlightedAt > 1000L) {
+        if (now - highlightedAt > 1000L) {
             draw(minecraft.level, here);
         }
     }

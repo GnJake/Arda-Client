@@ -24,7 +24,22 @@ public final class CurrencyHud extends HudPanel {
         return CurrencyTracker.CURRENCY.total(ArdaStore.data.currencyEnderChest);
     }
 
+    /** {gems, change or hint}, worked out once a tick. */
+    private static final PerTick<String[]> TEXT = new PerTick<>();
+
     private static String gems() {
+        return TEXT.get(CurrencyHud::build)[0];
+    }
+
+    private static String secondary() {
+        return TEXT.get(CurrencyHud::build)[1];
+    }
+
+    private static String[] build() {
+        return new String[]{wholeGems(), waitingForEnderChest() ? ENDER_CHEST_HINT : change()};
+    }
+
+    private static String wholeGems() {
         return ArdaCurrency.BLACK_GEM.amount(bloodstones() / ArdaCurrency.BLOODSTONES_PER_GEM);
     }
 
@@ -35,10 +50,6 @@ public final class CurrencyHud extends HudPanel {
     /** Shown in place of the change until the ender chest has been opened once. */
     private static boolean waitingForEnderChest() {
         return ArdaStore.data.currencyEnderChest && !CurrencyTracker.CURRENCY.enderChestSeen();
-    }
-
-    private static String secondary() {
-        return waitingForEnderChest() ? ENDER_CHEST_HINT : change();
     }
 
     @Override

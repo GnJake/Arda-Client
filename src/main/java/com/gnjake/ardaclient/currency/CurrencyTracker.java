@@ -2,9 +2,11 @@ package com.gnjake.ardaclient.currency;
 
 import com.gnjake.ardaclient.ArdaClient;
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -60,6 +62,7 @@ public final class CurrencyTracker {
     private static final long RECOVERY_WINDOW = 5 * CurrencyLedger.MINUTE;
     /** How long currency left in a closed menu may take to come back to the inventory. */
     private static final long HANDED_BACK_WINDOW = 15_000L;
+    private static final long EARNED_CACHE_FOR = 1_000L;
     /** Bundles can hold bundles; this bounds the search. */
     private static final int MAX_NESTING = 4;
     /** Shulker boxes share one key: a filled box can be broken, carried and placed anywhere. */
@@ -93,6 +96,10 @@ public final class CurrencyTracker {
     private final Pending unsettled = new Pending();
     /** Currency in the open menu's crafting grid last tick. */
     private long lastGrid;
+    /** {at, earned, ledgerChanges} for each period, from {@link #earned}. */
+    private final Map<Long, long[]> earnedCache = new HashMap<>();
+    /** Counts changes to this tally, so a cached total is dropped as soon as something is earned or reset. */
+    private long ledgerChanges;
     /** {expires, amount} for what left the inventory with no container open. */
     private final ArrayDeque<long[]> dropped = new ArrayDeque<>();
     /** {expires, amount} for currency a closed menu is about to hand back, from its slots or its crafting grid. */
@@ -128,12 +135,25 @@ public final class CurrencyTracker {
     }
 
     public long earned(long window, long now) {
-        return lastPlayer == null ? 0L : CurrencyLedger.earned(lastPlayer.getUUID(), this.tally, window, now);
+        if (lastPlayer == null) {
+            return 0L;
+        }
+
+        // The panels ask for each period several times a frame, and a week is thousands of minutes to add up.
+        long[] cached = this.earnedCache.get(window);
+        if (cached != null && now - cached[0] >= 0L && now - cached[0] < EARNED_CACHE_FOR && cached[2] == this.ledgerChanges) {
+            return cached[1];
+        }
+
+        long earned = CurrencyLedger.earned(lastPlayer.getUUID(), this.tally, window, now);
+        this.earnedCache.put(window, new long[]{now, earned, this.ledgerChanges});
+        return earned;
     }
 
     public void resetTally() {
         if (lastPlayer != null) {
             CurrencyLedger.resetEarned(lastPlayer.getUUID(), this.tally, System.currentTimeMillis());
+            this.ledgerChanges++;
             dropped.clear();
             handedBack.clear();
         }
@@ -318,6 +338,7 @@ public final class CurrencyTracker {
     private void earn(UUID id, long amount, long now, String how) {
         if (amount > 0L) {
             CurrencyLedger.recordEarned(id, this.tally, amount, now, source(how));
+            this.ledgerChanges++;
             ArdaClient.LOG.info("{} tally: earned {} ({})", this.tally.logName, this.tally.describe(amount), how);
         }
     }

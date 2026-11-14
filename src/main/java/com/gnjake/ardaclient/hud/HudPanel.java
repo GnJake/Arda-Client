@@ -15,6 +15,33 @@ public abstract class HudPanel {
     private static final long EXTERNAL_TIMEOUT = 1000L;
 
     private long drawnExternallyAt;
+    /**
+     * Counts client ticks. Panels work out their text, size and position once a tick and draw that every frame, since
+     * nothing they show changes faster than 20 times a second.
+     */
+    private static long tick;
+    private long sizedAt = -1L;
+    private int width;
+    private int height;
+    private Bounds cached;
+    private long cachedAt = -1L;
+    private int cachedScreenWidth;
+    private int cachedScreenHeight;
+
+    /** Called at the end of every client tick: panels refresh what they show on the next frame. */
+    public static void tick() {
+        tick++;
+    }
+
+    /** Makes every panel refresh on the next frame, after a setting or position changes. */
+    public static void refreshAll() {
+        tick++;
+    }
+
+    /** The client tick, for {@link PerTick}. */
+    static long currentTick() {
+        return tick;
+    }
 
     public abstract boolean enabled();
 
@@ -44,10 +71,35 @@ public abstract class HudPanel {
         return this.enabled() && now - this.drawnExternallyAt > EXTERNAL_TIMEOUT;
     }
 
+    /**
+     * This tick's size, measured once. A docked panel's position asks the panel above for its bounds, all the way up the
+     * column, so keeping them also stops that work doubling with each docked panel.
+     */
+    private void size(long now) {
+        if (this.sizedAt != tick) {
+            Font font = Minecraft.getInstance().font;
+            this.width = this.contentWidth(font, now);
+            this.height = this.contentHeight(font, now);
+            this.sizedAt = tick;
+        }
+    }
+
     public Bounds bounds(int screenWidth, int screenHeight, long now) {
-        Font font = Minecraft.getInstance().font;
-        double width = this.contentWidth(font, now) * this.scale();
-        double height = this.contentHeight(font, now) * this.scale();
+        if (this.cached != null && this.cachedAt == tick && screenWidth == this.cachedScreenWidth && screenHeight == this.cachedScreenHeight) {
+            return this.cached;
+        }
+
+        this.cached = this.measure(screenWidth, screenHeight, now);
+        this.cachedAt = tick;
+        this.cachedScreenWidth = screenWidth;
+        this.cachedScreenHeight = screenHeight;
+        return this.cached;
+    }
+
+    private Bounds measure(int screenWidth, int screenHeight, long now) {
+        this.size(now);
+        double width = this.width * this.scale();
+        double height = this.height * this.scale();
         double x = Math.min(Math.max(0.0, screenWidth - width), this.left(screenWidth, screenHeight, now));
         double y = Math.min(Math.max(0.0, screenHeight - height), this.top(screenWidth, screenHeight, now));
         return new Bounds(x, y, width, height);
@@ -61,11 +113,13 @@ public abstract class HudPanel {
 
     /** Unscaled width, for a HUD that positions the panel itself. */
     public int width(long now) {
-        return this.contentWidth(Minecraft.getInstance().font, now);
+        this.size(now);
+        return this.width;
     }
 
     public int height(long now) {
-        return this.contentHeight(Minecraft.getInstance().font, now);
+        this.size(now);
+        return this.height;
     }
 
     public void drawAt(GuiGraphicsExtractor graphics, double x, double y, double scale, long now) {
@@ -73,7 +127,8 @@ public abstract class HudPanel {
         graphics.pose().pushMatrix();
         graphics.pose().translate((float)x, (float)y);
         graphics.pose().scale((float)scale);
-        this.draw(graphics, font, this.contentWidth(font, now), this.contentHeight(font, now), now);
+        this.size(now);
+        this.draw(graphics, font, this.width, this.height, now);
         graphics.pose().popMatrix();
     }
 

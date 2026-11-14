@@ -5,6 +5,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.DoubleToIntFunction;
 
 /**
@@ -35,6 +38,13 @@ public final class ArdaTheme {
     private ArdaTheme() {
     }
 
+    /** Most accent strings kept; the HUD only uses a handful. */
+    private static final int ACCENT_TEXTS = 256;
+    private static int[] stops;
+    private static int stopsKey;
+    /** Gradient text, one color per letter, kept until the colors change. */
+    private static final Map<String, MutableComponent> accentTexts = new HashMap<>();
+
     public static int accent() {
         return 0xFF000000 | ArdaStore.data.accentColor;
     }
@@ -44,19 +54,31 @@ public final class ArdaTheme {
         return accentAt(1.0);
     }
 
-    /** The gradient's colors in order, starting with the accent. Just the accent with the gradient off. */
+    /**
+     * The gradient's colors in order, starting with the accent. Just the accent with the gradient off. Kept until the
+     * colors change, since the HUD asks for it many times a frame. Callers must not change the array.
+     */
     public static int[] stops() {
+        int key = Objects.hash(ArdaStore.data.accentColor, ArdaStore.data.accentGradient, ArdaStore.data.gradientColors);
+        if (stops != null && key == stopsKey) {
+            return stops;
+        }
+
+        int[] colors;
         if (!ArdaStore.data.accentGradient) {
-            return new int[]{ArdaStore.data.accentColor};
+            colors = new int[]{ArdaStore.data.accentColor};
+        } else {
+            colors = new int[ArdaStore.data.gradientColors.size() + 1];
+            colors[0] = ArdaStore.data.accentColor;
+            for (int index = 1; index < colors.length; index++) {
+                colors[index] = ArdaStore.data.gradientColors.get(index - 1);
+            }
         }
 
-        int[] stops = new int[ArdaStore.data.gradientColors.size() + 1];
-        stops[0] = ArdaStore.data.accentColor;
-        for (int index = 1; index < stops.length; index++) {
-            stops[index] = ArdaStore.data.gradientColors.get(index - 1);
-        }
-
-        return stops;
+        stops = colors;
+        stopsKey = key;
+        accentTexts.clear();
+        return colors;
     }
 
     /** The accent at {@code amount} of the way along the gradient, from 0 (start) to 1 (end). */
@@ -87,12 +109,13 @@ public final class ArdaTheme {
             return;
         }
 
-        int[] letters = text.codePoints().toArray();
-        for (int index = 0; index < letters.length; index++) {
-            String letter = Character.toString(letters[index]);
-            g.text(font, letter, x, y, accentBrightAt(index / (double)(letters.length - 1)), shadow);
-            x += font.width(letter);
+        // One string with a color per letter, rather than a separate draw for each letter.
+        stops();
+        if (accentTexts.size() > ACCENT_TEXTS) {
+            accentTexts.clear();
         }
+
+        g.text(font, accentTexts.computeIfAbsent(text, ArdaTheme::accentComponent), x, y, 0xFFFFFFFF, shadow);
     }
 
     public static void accentTextCentered(GuiGraphicsExtractor g, Font font, String text, int centerX, int y) {
@@ -127,25 +150,54 @@ public final class ArdaTheme {
         return out;
     }
 
-    /** Fills a rectangle left to right, coloring each strip by how far along the rectangle it is. */
+    /**
+     * Fills a rectangle left to right, colored by how far along it is. The gradient is straight between its stops, so
+     * each stretch between two stops is one shaded rectangle: the game only shades top to bottom, so it's drawn turned
+     * a quarter turn.
+     */
     public static void horizontalGradient(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, DoubleToIntFunction color) {
         int width = x2 - x1;
-        if (width <= 1) {
+        int height = y2 - y1;
+        if (width <= 1 || height <= 0) {
             g.fill(x1, y1, x2, y2, color.applyAsInt(0.0));
             return;
         }
 
-        int step = Math.max(1, width / 64);
-        for (int x = x1; x < x2; x += step) {
-            g.fill(x, y1, Math.min(x2, x + step), y2, color.applyAsInt((x - x1 + step / 2.0) / width));
+        int segments = Math.max(1, stops().length - 1);
+        g.pose().pushMatrix();
+        g.pose().translate(x1, y2);
+        g.pose().rotate((float)(-Math.PI / 2.0));
+        // Turned, the rectangle's top is the left edge and its height runs left to right.
+        int from = 0;
+        for (int segment = 1; segment <= segments; segment++) {
+            int to = segment == segments ? width : Math.round(width * segment / (float)segments);
+            if (to > from) {
+                g.fillGradient(0, from, height, to, color.applyAsInt(from / (double)width), color.applyAsInt(to / (double)width));
+            }
+
+            from = to;
         }
+
+        g.pose().popMatrix();
     }
 
-    /** Fills a rectangle top to bottom, coloring each row by how far down the rectangle it is. */
+    /** Fills a rectangle top to bottom, colored by how far down it is: one shaded rectangle between each two stops. */
     public static void verticalGradient(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, DoubleToIntFunction color) {
         int height = y2 - y1;
-        for (int y = y1; y < y2; y++) {
-            g.fill(x1, y, x2, y + 1, color.applyAsInt(height <= 1 ? 0.0 : (y - y1 + 0.5) / height));
+        if (height <= 1) {
+            g.fill(x1, y1, x2, y2, color.applyAsInt(0.0));
+            return;
+        }
+
+        int segments = Math.max(1, stops().length - 1);
+        int from = 0;
+        for (int segment = 1; segment <= segments; segment++) {
+            int to = segment == segments ? height : Math.round(height * segment / (float)segments);
+            if (to > from) {
+                g.fillGradient(x1, y1 + from, x2, y1 + to, color.applyAsInt(from / (double)height), color.applyAsInt(to / (double)height));
+            }
+
+            from = to;
         }
     }
 

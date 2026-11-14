@@ -43,6 +43,8 @@ public final class ArdaModule extends Module {
                 () -> ArdaStore.data.profitChat, value -> ArdaStore.data.profitChat = value),
             new ArdaModule("towers-panel", "Who holds each tower and each clan's estimated points, during the Towers Event.",
                 () -> ArdaStore.data.towersHud, value -> ArdaStore.data.towersHud = value),
+            new ArdaModule("ward-panel", "Magical Ward lost and regained in each dungeon level.",
+                () -> ArdaStore.data.wardHud, value -> ArdaStore.data.wardHud = value),
             new ArdaModule("tunnel-pathfinder", "Finds and marks a walking path to the next tunnel spawner. Turn it off if it lags.",
                 () -> ArdaStore.data.tunnelPath, value -> ArdaStore.data.tunnelPath = value),
             new ArdaModule("tunnel-xray", "Outlines logged tunnel spawners through walls and draws the tunnel path as highlighted blocks.",

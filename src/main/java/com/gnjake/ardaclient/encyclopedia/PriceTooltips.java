@@ -17,7 +17,7 @@ import net.minecraft.world.item.TooltipFlag;
 
 public final class PriceTooltips {
     public static void register() {
-        ItemTooltipCallback.EVENT.register(PriceTooltips::append);
+        ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> com.gnjake.ardaclient.debug.PerfMonitor.time("price tooltips", () -> append(stack, context, flag, lines)));
     }
 
     public static void append(ItemStack stack, TooltipContext context, TooltipFlag flag, List<Component> lines) {

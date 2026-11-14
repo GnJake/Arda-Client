@@ -13,6 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +21,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScoreEntry;
@@ -32,7 +35,7 @@ import net.minecraft.world.scores.Scoreboard;
  * <ul>
  *   <li>Skirmish: about 2.25 Black Gems per level, however many players took part, plus up to a Bloodstone per bonus
  *   kill in each reward chest.</li>
- *   <li>Dungeon: about 2.25 Black Gems per level plus 2.25, and 2.25 Mithril per level, for each player.</li>
+ *   <li>Dungeon: about 2.25 Black Gems per level plus 2.25, and 2 Mithril per level, for each player.</li>
  * </ul>
  */
 public final class ProfitEstimator {
@@ -41,8 +44,19 @@ public final class ProfitEstimator {
     /** Bonus kills available at each skirmish level; each one adds a Bloodstone to every reward chest. */
     private static final int[] SKIRMISH_BONUS_KILLS = {11, 24, 39, 37, 55, 21, 41, 35};
     private static final double RATE = 2.25;
-    /** A dungeon start counts as the player's when they changed worlds this recently, which entering one does. */
+    private static final double MITHRIL_RATE = 2.0;
+    /**
+     * A dungeon start counts as the player's when they changed worlds or teleported this recently, which entering one
+     * does. Every dungeon is in the same world, so moving between levels is a teleport, not a world change.
+     */
     private static final long ENTER_WINDOW = 45_000L;
+    /** The next level of a run starts this soon after the party finishes the last one, without a teleport. */
+    private static final long NEXT_LEVEL_WINDOW = 5 * 60_000L;
+    /**
+     * A start counts as the player's when they teleported to that dungeon level ("Destination: [Dungeon 1]") this
+     * recently, however long they wait before starting it.
+     */
+    private static final long DESTINATION_WINDOW = 15 * 60_000L;
     /** One finish can show up as both a vanquish message and a Chronicle message. */
     private static final long REPEAT_WINDOW = 60_000L;
     private static final long DUNGEON_TIMEOUT = 2 * 3_600_000L;
@@ -50,6 +64,11 @@ public final class ProfitEstimator {
     private static final Pattern DUNGEON_START = Pattern.compile("(?i)\\[Dungeon\\]\\s*The\\s+(.+?)\\s+are challenged to combat");
     private static final Pattern DUNGEON_VANQUISHED = Pattern.compile("(?i)\\[Dungeon\\]\\s*(\\S+)\\s+has vanquished\\s+The\\s+(.+?)\\s*$");
     private static final Pattern SKIRMISH_VANQUISHED = Pattern.compile("(?i)\\[Skirmish\\]:?\\s*Level\\s+(\\d+)\\s+has been vanquished by\\s+(\\S+)");
+    private static final Pattern DESTINATION = Pattern.compile("(?i)\\[Teleport\\]:?\\s*->\\s*Destination:\\s*\\[([^\\]]*)\\]");
+    private static final Pattern DUNGEON_DESTINATION = Pattern.compile("(?i)^Dungeon\\s+(\\d+)$");
+    private static final Pattern TELEPORTED = Pattern.compile("(?i)\\[Teleport\\]:?\\s*->\\s*Successfully Teleported");
+    /** "[Skirmish]: Level 5 will attack near 274, 198 in [10m]", sent 30, 10, 5 and 1 minutes ahead. */
+    private static final Pattern SKIRMISH_ANNOUNCED = Pattern.compile("(?i)^\\s*\\[Skirmish\\]:?\\s*Level\\s+(\\d+)\\s+will attack near\\b");
     private static final Pattern SKIRMISH_INFO = Pattern.compile("(?i)^\\s*\\[Skirmish\\]:?\\s*Level\\s+(\\d+)\\s+(?:Spawn location|spawns at)\\b");
     /** Chronicle progress is only sent to players who took part. */
     private static final Pattern CHRONICLE = Pattern.compile("(?i)^\\s*Chronicle(?:\\s+Advanced!)?:?\\s*(Dungeon|Skirmish)\\s+Level\\s+(\\d+)\\b");
@@ -58,11 +77,34 @@ public final class ProfitEstimator {
     private static final Map<String, Long> reported = new HashMap<>();
     private static ClientLevel lastLevel;
     private static long levelChangedAt;
+    private static long teleportedAt;
+    private static long dungeonFinishedAt;
+    /** The dungeon level the player last teleported to, and when, or 0 after a teleport anywhere else. */
+    private static int destinationTier;
+    private static long destinationAt;
     private static int activeTier;
     private static int activePlayers;
     private static long activeSince;
 
     private ProfitEstimator() {
+    }
+
+    /** The dungeon level the player's party is running, or 0 when none. */
+    /**
+     * The dungeon level the player has teleported into but not started yet, or 0. Food eaten while waiting to start
+     * still belongs to that level's ward.
+     */
+    public static int arrivedAtDungeon() {
+        long now = System.currentTimeMillis();
+        return destinationTier > 0 && teleportedAt >= destinationAt && now - destinationAt <= DESTINATION_WINDOW ? destinationTier : 0;
+    }
+
+    public static int activeDungeon() {
+        if (activeTier > 0 && System.currentTimeMillis() - activeSince > DUNGEON_TIMEOUT) {
+            activeTier = 0;
+        }
+
+        return activeTier;
     }
 
     public static double skirmishGems(int level) {
@@ -94,7 +136,7 @@ public final class ProfitEstimator {
     }
 
     public static double dungeonMithril(int level, int players) {
-        return RATE * level * players;
+        return MITHRIL_RATE * level * players;
     }
 
     /** A number with up to two decimals and no trailing zeros, such as 9, 4.5 or 6.75. */
@@ -104,20 +146,44 @@ public final class ProfitEstimator {
 
     /**
      * Adds the estimate to each skirmish in {@code /skirmish info}, whose lines read
-     * "[Skirmish]: Level 6 Spawn location: ..." or "[Skirmish]: Level 5 spawns at: ... in 11 minutes".
+     * "[Skirmish]: Level 6 Spawn location: ..." or "[Skirmish]: Level 5 spawns at: ... in 11 minutes", and to the
+     * announcements before a skirmish attacks.
      */
     public static Component annotate(Component message, boolean overlay) {
         if (overlay || !ArdaStore.data.profitChat || message == null) {
             return message;
         }
 
-        Matcher info = SKIRMISH_INFO.matcher(message.getString().replaceAll("(?i)§[0-9a-fk-or]", ""));
+        String text = message.getString().replaceAll("(?i)§[0-9a-fk-or]", "");
+        Matcher info = SKIRMISH_INFO.matcher(text);
         if (!info.find()) {
-            return message;
+            info = SKIRMISH_ANNOUNCED.matcher(text);
+            if (!info.find()) {
+                return message;
+            }
         }
 
-        String estimate = "  " + skirmishEstimate(Integer.parseInt(info.group(1)));
-        return message.copy().append(ArdaTheme.accentComponent(estimate));
+        Component estimate = ArdaTheme.accentComponent("  " + skirmishEstimate(Integer.parseInt(info.group(1))));
+        return text.contains("\n") ? endOfFirstLine(message, estimate) : message.copy().append(estimate);
+    }
+
+    /** The message with {@code extra} at the end of its first line, keeping each part's style and links. */
+    private static Component endOfFirstLine(Component message, Component extra) {
+        MutableComponent result = Component.empty();
+        boolean[] inserted = {false};
+        message.visit((style, part) -> {
+            int lineBreak = inserted[0] ? -1 : part.indexOf('\n');
+            if (lineBreak < 0) {
+                result.append(Component.literal(part).withStyle(style));
+            } else {
+                result.append(Component.literal(part.substring(0, lineBreak)).withStyle(style)).append(extra)
+                    .append(Component.literal(part.substring(lineBreak)).withStyle(style));
+                inserted[0] = true;
+            }
+
+            return Optional.empty();
+        }, Style.EMPTY);
+        return result;
     }
 
     public static void tick(Minecraft minecraft) {
@@ -149,10 +215,26 @@ public final class ProfitEstimator {
             activeTier = 0;
         }
 
+        Matcher destination = DESTINATION.matcher(line);
+        if (destination.find()) {
+            Matcher dungeon = DUNGEON_DESTINATION.matcher(destination.group(1).strip());
+            destinationTier = dungeon.find() ? Integer.parseInt(dungeon.group(1)) : 0;
+            destinationAt = now;
+            return;
+        }
+
+        if (TELEPORTED.matcher(line).find()) {
+            teleportedAt = now;
+            return;
+        }
+
         Matcher start = DUNGEON_START.matcher(line);
         if (start.find()) {
             int tier = DungeonTracker.tierForName(start.group(1));
-            if (tier > 0 && now - levelChangedAt <= ENTER_WINDOW) {
+            boolean entered = now - Math.max(levelChangedAt, teleportedAt) <= ENTER_WINDOW || now - dungeonFinishedAt <= NEXT_LEVEL_WINDOW
+                || tier == destinationTier && now - destinationAt <= DESTINATION_WINDOW;
+            if (tier > 0 && entered) {
+                destinationTier = 0;
                 activeTier = tier;
                 activeSince = now;
                 activePlayers = partySize(minecraft);
@@ -198,6 +280,8 @@ public final class ProfitEstimator {
             return;
         }
 
+        dungeonFinishedAt = now;
+        destinationTier = 0;
         // The party can shrink during a run; the larger count is the better guess when the scoreboard is gone.
         int players = partySize(minecraft);
         if (tier == activeTier) {

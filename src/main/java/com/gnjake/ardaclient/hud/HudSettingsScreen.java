@@ -70,13 +70,14 @@ public final class HudSettingsScreen extends ArdaPanelScreen {
 
         y += ROW_STEP;
         x = this.toggle(this.left, y, "Tally", () -> ArdaStore.data.tallyHud, value -> ArdaStore.data.tallyHud = value);
-        this.resetButton(x + 6, y, 90, "Reset Tally", CurrencyTracker.CURRENCY);
-        this.button("Move HUD", x + 102, y, 80, () -> this.minecraft.gui.setScreen(new HudPlacementScreen(this)));
-        ArdaButton towers = this.button(TowersHud.modeLabel(), x + 188, y, this.px + this.pw - 10 - x - 188, null);
+        this.resetButton(x + 6, y, 76, "Reset Tally", CurrencyTracker.CURRENCY);
+        this.button("Move HUD", x + 88, y, 64, () -> this.minecraft.gui.setScreen(new HudPlacementScreen(this)));
+        ArdaButton towers = this.button(TowersHud.modeLabel(), x + 158, y, 86, null);
         towers.setAction(() -> {
             TowersHud.cycleMode();
             towers.setMessage(TowersHud.modeLabel());
         });
+        this.toggle(x + 250, y, "Ward", this.px + this.pw - 10 - x - 250, () -> ArdaStore.data.wardHud, value -> ArdaStore.data.wardHud = value);
 
         y += ROW_STEP;
         this.swatchTop = y + 3;

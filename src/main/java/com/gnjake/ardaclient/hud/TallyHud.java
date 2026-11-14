@@ -23,13 +23,30 @@ public final class TallyHud extends HudPanel {
         return CurrencyTracker.CURRENCY.earned(CurrencyLedger.WINDOWS[window], now);
     }
 
-    private static String gems(int window, long now) {
-        return ArdaCurrency.BLACK_GEM.amount(earned(window, now) / ArdaCurrency.BLOODSTONES_PER_GEM);
+    /** {gems, change} for each period, worked out once a tick. */
+    private static final PerTick<String[][]> ROWS = new PerTick<>();
+    private static final PerTick<Integer> CHANGE_WIDTH = new PerTick<>();
+
+    private static String[][] rows(long now) {
+        return ROWS.get(() -> {
+            String[][] rows = new String[CurrencyLedger.WINDOWS.length][];
+            for (int window = 0; window < rows.length; window++) {
+                long earned = earned(window, now);
+                // The change is always shown, even at zero, so a Zircon or Forged Tungsten earned shows up in Bloodstones.
+                rows[window] = new String[]{ArdaCurrency.BLACK_GEM.amount(earned / ArdaCurrency.BLOODSTONES_PER_GEM),
+                    ArdaCurrency.BLOODSTONE.amount(earned % ArdaCurrency.BLOODSTONES_PER_GEM)};
+            }
+
+            return rows;
+        });
     }
 
-    /** Always shown, even at zero, so a Zircon or Forged Tungsten earned shows up as a change in Bloodstones. */
+    private static String gems(int window, long now) {
+        return rows(now)[window][0];
+    }
+
     private static String change(int window, long now) {
-        return ArdaCurrency.BLOODSTONE.amount(earned(window, now) % ArdaCurrency.BLOODSTONES_PER_GEM);
+        return rows(now)[window][1];
     }
 
     @Override
@@ -67,6 +84,10 @@ public final class TallyHud extends HudPanel {
     }
 
     private static int changeWidth(Font font, long now) {
+        return CHANGE_WIDTH.get(() -> measureChange(font, now));
+    }
+
+    private static int measureChange(Font font, long now) {
         int width = 0;
         for (int window = 0; window < CurrencyLedger.WINDOWS.length; window++) {
             width = Math.max(width, font.width(change(window, now)));

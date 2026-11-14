@@ -14,6 +14,8 @@ public final class TowersHud extends HudPanel {
     public static final TowersHud INSTANCE = new TowersHud();
     private static final int ROW = 10;
     private static final int TITLE = 14;
+    private static final PerTick<List<String[]>> LINES = new PerTick<>();
+    private static final PerTick<String> TITLE_TEXT = new PerTick<>();
     /** Shown in the HUD editor when no event is running. */
     private boolean preview;
 
@@ -54,8 +56,12 @@ public final class TowersHud extends HudPanel {
         this.preview = preview;
     }
 
-    /** The panel's lines below the title: {left, right, color}. */
+    /** The panel's lines below the title: {left, right, color}. Worked out once a tick. */
     private static List<String[]> lines(long now) {
+        return LINES.get(TowersHud::build);
+    }
+
+    private static List<String[]> build() {
         List<String[]> lines = new ArrayList<>();
         if (TowerEvent.active() || TowerEvent.standings().isEmpty()) {
             for (int tower = 1; tower <= TowerEvent.TOWERS; tower++) {
@@ -76,6 +82,10 @@ public final class TowersHud extends HudPanel {
     }
 
     private static String title(long now) {
+        return TITLE_TEXT.get(() -> buildTitle(now));
+    }
+
+    private static String buildTitle(long now) {
         long remaining = TowerEvent.remaining(now);
         if (remaining >= 0L) {
             return "Towers " + remaining / 60_000L + ":" + String.format(Locale.ROOT, "%02d", remaining / 1000L % 60L);
@@ -117,7 +127,7 @@ public final class TowersHud extends HudPanel {
     }
 
     /** The lowest panel above it in the default column. */
-    private static HudPanel above(long now) {
+    static HudPanel above(long now) {
         if (MithrilTallyHud.INSTANCE.shown(now)) {
             return MithrilTallyHud.INSTANCE;
         }

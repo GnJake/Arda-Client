@@ -4,6 +4,7 @@ import com.gnjake.ardaclient.ServerCommands;
 import com.gnjake.ardaclient.config.ArdaStore;
 import com.gnjake.ardaclient.currency.CurrencyLogScreen;
 import com.gnjake.ardaclient.dungeon.DungeonTracker;
+import com.gnjake.ardaclient.dungeon.WardLogScreen;
 import com.gnjake.ardaclient.encyclopedia.EncyclopediaScreen;
 import com.gnjake.ardaclient.hud.HudSettingsScreen;
 import com.gnjake.ardaclient.profit.ProfitScreen;
@@ -51,6 +52,7 @@ public final class WheelSlots {
         new Builtin("texturepack", "TEXTURE PACK", "Run /texturepack", Items.PAINTING, () -> send("/texturepack")),
         new Builtin("commands", "COMMANDS", "Your command shortcuts", Items.COMMAND_BLOCK, () -> open(new QuickCommandsScreen(null))),
         new Builtin("currency_log", "CURRENCY LOG", "Earnings by hour and source", Items.WRITTEN_BOOK, () -> open(new CurrencyLogScreen(null))),
+        new Builtin("ward_log", "WARD LOG", "Recent dungeon levels and their ward", Items.SHIELD, () -> open(new WardLogScreen(null))),
         new Builtin("encyclopedia", "ENCYCLOPEDIA", "Item prices", Items.BOOK, () -> open(new EncyclopediaScreen(null))),
         new Builtin("structures", "STRUCTURES", "Camps, outposts, tunnels and towers", Items.FILLED_MAP, () -> open(new StructureScreen(null))),
         new Builtin("waypoints", "WAYPOINTS", "Skirmish waypoint settings", Items.LODESTONE, () -> open(new WaypointSettingsScreen(null))),

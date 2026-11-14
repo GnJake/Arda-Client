@@ -51,6 +51,10 @@ public final class ArdaHudElement extends HudElement {
 
     @Override
     public void render(HudRenderer renderer) {
+        com.gnjake.ardaclient.debug.PerfMonitor.time("meteor hud " + this.panel.getClass().getSimpleName(), () -> this.draw(renderer));
+    }
+
+    private void draw(HudRenderer renderer) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null && !this.isInEditor()) {
             return;

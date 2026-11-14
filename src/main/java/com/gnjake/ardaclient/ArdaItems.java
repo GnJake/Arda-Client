@@ -39,6 +39,18 @@ public final class ArdaItems {
         return !direct.isBlank() ? direct : root.getCompoundOrEmpty("PublicBukkitValues").getStringOr(key, "");
     }
 
+    /** A number the server stored in custom data, directly or under {@code PublicBukkitValues}, or {@code fallback}. */
+    public static double customNumber(ItemStack stack, String key, double fallback) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null || data.isEmpty()) {
+            return fallback;
+        }
+
+        CompoundTag root = data.copyTag();
+        CompoundTag tags = root.contains(key) ? root : root.getCompoundOrEmpty("PublicBukkitValues");
+        return tags.contains(key) ? tags.getDoubleOr(key, fallback) : fallback;
+    }
+
     public static List<String> lore(ItemStack stack) {
         ItemLore lore = stack.get(DataComponents.LORE);
         return lore == null ? List.of() : lore.lines().stream().map(Component::getString).toList();

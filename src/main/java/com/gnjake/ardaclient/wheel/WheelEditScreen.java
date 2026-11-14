@@ -17,7 +17,7 @@ import net.minecraft.client.input.MouseButtonEvent;
  * many slots the wheel has, its size, and whether it shows labels and icons.
  */
 public final class WheelEditScreen extends ArdaPanelScreen {
-    private static final double MIN_SIZE = 0.65;
+    private static final double MIN_SIZE = 0.25;
     private static final double MAX_SIZE = 1.35;
     private static final int CONTROLS_WIDTH = 176;
 

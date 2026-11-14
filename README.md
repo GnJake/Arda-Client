@@ -10,9 +10,9 @@ when [Meteor Client](https://meteorclient.com/) is installed alongside it.
   labels and icons.
 - **Command shortcuts** - Create, edit, and delete your own one-click commands from the wheel.
 - **Profit estimator** - Posts an estimated profit in chat when you start or finish a dungeon, and when you finish a
-  skirmish, and adds each skirmish's estimate to `/skirmish info`. Dungeon estimates use your party size from the party scoreboard. The Profit screen lists estimates for
+  skirmish, and adds each skirmish's estimate to `/skirmish info` and to the announcements before a skirmish attacks. Dungeon estimates use your party size from the party scoreboard. The Profit screen lists estimates for
   every dungeon level with 1 to 5 players, and every skirmish level. Estimates are player averages: a skirmish pays
-  about 2.25 Black Gems per level, and a dungeon about 2.25 Black Gems per level plus 2.25 and 2.25 Mithril per level,
+  about 2.25 Black Gems per level, and a dungeon about 2.25 Black Gems per level plus 2.25 and 2 Mithril per level,
   for each player.
 - **Skirmish and mirage waypoints** - Skirmish announcements, `/skirmish info`, and Mirage Encampment announcements get
   a waypoint link. Click it to add a waypoint
@@ -22,11 +22,15 @@ when [Meteor Client](https://meteorclient.com/) is installed alongside it.
 - **Structures** - Harad's camps, outposts, towers and about 300 tunnel spawners come built in. **Completion** marks a
   tunnel spawner done when you finish it, until Harad refreshes. With Meteor, the **tunnel-xray** module outlines tunnel
   spawners through walls. **Add Camps** (or Outposts, Tunnels, Towers) puts that list on Xaero's map in a waypoint set
-  of the same name, and **Add All** puts every structure in an "All Structures" set.
+  of the same name, and **Add All** puts every structure in an "All Structures" set. **Clear Camps** (and so on) and **Clear All** remove
+  those waypoints again, from Xaero or Meteor, leaving waypoints you made yourself.
 - **Towers Event** - A panel shows which clan holds each tower and how many each clan has, then the final standings
   for five minutes after. The Towers tab in Structures shows each
   logged tower's holder too. A **TOWERS** wheel slot runs `/towersinfo holders`, which fills in the holders any time.
   **Towers** in HUD Settings shows the panel only during the event, always, or never.
+- **Magical Ward** - A panel shows your ward charge, which dungeon level you're running, how much ward that level's
+  hits took, how much regenerated, and what each food or potion you used (golden apples, Miruvor) gave, read from the item itself, with your last few levels below. It reads the
+  boss bar, action bar and sidebar, and shows during a dungeon run or while ward is on screen. Turn it off with **Ward** in HUD Settings. The **WARD LOG** wheel slot lists your recent levels with the ward each one took, regenerated and got from items.
 - **Tunnel pathfinding** - With **Path** on, a particle trail shows the best walking path to the nearest tunnel spawner you
   haven't completed yet. With Meteor's **tunnel-xray** module on, the path is drawn as highlighted floor blocks instead.
 - **Currency log** - The currency or Mithril tally in full: totals and hourly rates for each period, the last 12 hours hour by hour, and
@@ -35,6 +39,10 @@ when [Meteor Client](https://meteorclient.com/) is installed alongside it.
   `/dungeon_info` and dungeon announcements in chat. Individual tiers can be hidden.
 - **Currency counter** - Totals the Black Gems, Forged Tungsten, Zircon, and Bloodstones in your inventory, shown as
   whole Black Gems plus change in Bloodstones. It can also include your ender chest, as of the last time you opened it.
+- **Currency crafting** - A Currency panel beside the crafting table shows how many Zircon, Forged Tungsten and Black
+  Gems you can make. Click a row to fill the grid with that recipe (the grid is emptied first), or shift-click it to
+  craft as many as you can straight into your inventory. **All up** turns all your currency into the highest coins it
+  makes and keeps the change. The panel only shows while you're carrying currency.
 - **Currency tally** - Tracks the currency you earn over the last hour, 3 hours, 12 hours, 24 hours, and week. Currency
   counts once when it first reaches you, including loot from dungeon and camp chests. Spending it doesn't lower the
   tally, and it doesn't count again when you take it back out of a chest, ender chest, shulker box or bundle you put it

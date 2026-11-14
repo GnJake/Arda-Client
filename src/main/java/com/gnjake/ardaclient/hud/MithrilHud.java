@@ -14,7 +14,13 @@ public final class MithrilHud extends HudPanel {
     private MithrilHud() {
     }
 
+    private static final PerTick<String> TEXT = new PerTick<>();
+
     private static String text() {
+        return TEXT.get(MithrilHud::build);
+    }
+
+    private static String build() {
         return CurrencyTracker.MITHRIL.total(ArdaStore.data.currencyEnderChest) + " Mithril";
     }
 
